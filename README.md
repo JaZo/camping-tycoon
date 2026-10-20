@@ -1,0 +1,63 @@
+# ⛺ Camping Tycoon
+
+Een browsergame in de stijl van RollerCoaster Tycoon, maar dan voor een camping. Volledig in vanilla HTML, CSS en JavaScript (canvas), zonder server, zonder build-stap en zonder externe afhankelijkheden. Alles (ook de graphics) wordt in de browser gegenereerd.
+
+## Spelen
+
+Open `public/index.html` in een browser, of host de map `public` als statische site (bijvoorbeeld GitHub Pages).
+
+**GitHub Pages:** de workflow in `.github/workflows/pages.yml` publiceert de map `public` bij elke push naar `main`. Zet bij *Settings → Pages* de bron op *GitHub Actions*; daarna staat het spel op `https://<gebruikersnaam>.github.io/<repository>/`.
+
+Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). Via *Menu* kun je ook een savebestand exporteren en importeren.
+
+## Wat zit erin
+
+- **Paden** (grind en tegels) waar gasten en personeel overheen lopen. Alles moet via een pad met de ingang verbonden zijn.
+- **Staplekken**: tentplek, caravanplek en comfortplek. Bezette plekken tonen een tent, caravan of camper.
+- **Verhuur**: trekkershut, glampingtent, stacaravan, chalet en pipowagen.
+- **Voorzieningen**: receptie (verplicht om in te checken), slagboom, sanitairgebouw, toiletunit, restaurant met terras, snackbar, campingwinkel, wasserette, prullenbakken, bankjes, lantaarnpalen, picknicktafels, informatiebord, fietsverhuur en parkeerplaats.
+- **Recreatie**: speeltuin, zwembad, trampoline, midgetgolf, volleybalveld, jeu-de-boulesbaan, kampvuurplaats, recreatiezaal, dierenweide, skelterverhuur en tafeltennistafel.
+- **Natuur**: eiken, dennen, berken, treurwilgen, appelbomen, struiken, heggen, bloemperken, wilde bloemen en rotsblokken. Sfeer rond een staplek maakt gasten blijer.
+- **Dieren**: geiten, schapen, kippen, koeien, pony's, konijnen en eenden lopen (of zwemmen) vrij rond.
+- **Personeel**: schoonmakers (zwerfafval en sanitair), onderhoudsmonteurs (reparaties en preventief onderhoud) en animatiemedewerkers (vermaak, 's avonds bij het kampvuur).
+- **Terrein**: gras, zand en water om zelf een vijver of strandje te maken.
+
+## Simulatie
+
+- Gezelschappen (gezinnen, stellen, vriendengroepen, senioren) komen aan met een eigen wens (tent, caravan, hut...), checken in bij de receptie en blijven een aantal nachten.
+- Iedere gast heeft behoeften (honger, hygiëne, vermaak, vermoeidheid), een tevredenheid en gedachten die je kunt bekijken door op de gast te klikken.
+- Seizoenen en weer: hoogseizoen in de zomer, regen, sneeuw in de winter, dag en nacht met lantaarnlicht.
+- Voorzieningen slijten, gaan af en toe kapot en worden vies. Een onderhoudsmonteur repareert ze; zonder monteur komt na drie dagen een dure externe reparateur. Gasten laten afval slingeren.
+- Vertrekkende gezelschappen laten weten waarover ze ontevreden waren (in de melding en in het Gasten-paneel onder *Laatste vertrekken*).
+- Een beoordeling van 0 tot 5 sterren, opgebouwd uit tevredenheid, netheid, voorzieningen en natuur, bepaalt hoeveel gasten er komen en wat ze willen betalen.
+- Prijzen per nacht en tarieven van voorzieningen zijn instelbaar. Maandelijkse financiën, doelen en een noodlening als het misgaat.
+
+## Besturing
+
+| Actie | Invoer |
+|---|---|
+| Schuiven | slepen met de muis, rechtermuisknop, pijltjes of WASD |
+| Zoomen | scrollwiel, `+` / `-`, pinch op touchscreens |
+| Bouwen | kies een categorie onderin, klik een item en klik op het terrein (slepen voor paden en terrein) |
+| Stoppen met bouwen | `Esc` of rechtermuisknop |
+| Informatie | klik op een gebouw, gast, personeelslid of dier |
+| Pauze / snelheid | spatie, `1`, `2`, `3` |
+| Slopen | `X` of `Delete` |
+
+## Ontwikkeling
+
+Er is geen build-stap. De bestanden in `public/js/` worden in volgorde geladen door `public/index.html`:
+
+| Bestand | Inhoud |
+|---|---|
+| `util.js` | hulpfuncties, namen |
+| `data.js` | catalogus van objecten, gasttypes, personeel, doelen, balanswaarden |
+| `sprites.js` | procedurele isometrische sprites, personen en dieren |
+| `world.js` | tegelraster, plaatsing, bereikbaarheid, padvinding |
+| `guests.js` | gezelschappen en gastengedrag |
+| `staff.js` | personeel en dieren |
+| `economy.js` | geld, beoordeling, weer, maandoverzicht, doelen |
+| `render.js` | camera, tekenen, nacht, weer, minimap |
+| `ui.js` | HUD, panelen, invoer |
+| `game.js` | spel-loop, kaartgeneratie, opslaan en laden |
+| `selftest.js` | automatische test: `public/index.html?test=1&days=30` bouwt een complete camping en spoelt dagen door; `&scenario=start` simuleert een bescheiden beginnerscamping; `&input=1` test de muis- en toetsinvoer (uitvoer in de console) |
