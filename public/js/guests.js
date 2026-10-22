@@ -51,24 +51,25 @@ const Guests = {
 
   trySpawn(dt) {
     if (Game.t < 0.3 || Game.t > 0.8) return;
-    let spots = 0; for (const o of World.objects.values()) if (DATA.items[o.type].kind === 'spot') spots++;
-    if (!spots) return;
-    const season = DATA.seasonFactor[Game.month];
+    let pitches = 0, accs = 0; for (const o of World.objects.values()) { const d = DATA.items[o.type]; if (d.kind === 'spot') { if (d.acc) accs++; else pitches++; } }
+    if (!pitches && !accs) return;
+    const season = DATA.seasonFactor[Game.month], accS = DATA.accSeasonFactor[Game.month];
     const rating = Econ.rating / 100;
     const weather = Game.weather === 'regen' ? 0.55 : Game.weather === 'bewolkt' ? 0.85 : 1;
-    const perDay = (2 + spots * 0.45) * season * (0.4 + rating * 0.8) * weather;
+    const perDay = (1.5 * Math.max(pitches ? season : 0, accs ? accS : 0) + pitches * 0.45 * season + accs * 0.5 * accS) * (0.4 + rating * 0.8) * weather;
     if (Math.random() < perDay * dt / (0.47 * DATA.DAY_SECONDS)) this.createParty();
   },
 
   createParty(forceWant) {
     const winter = DATA.seasonOf(Game.month) === 'winter';
+    const season = DATA.seasonFactor[Game.month], accS = DATA.accSeasonFactor[Game.month];
     const type = Util.weighted(Object.entries(DATA.partyTypes).map(([k, v]) => [k, v.weight * (winter && (k === 'jongeren') ? 0.3 : 1)]));
     const pt = DATA.partyTypes[type];
     // welke types bestaan er op de camping?
     const existing = new Set();
     for (const o of World.objects.values()) { const d = DATA.items[o.type]; if (d.kind === 'spot') d.accepts.forEach(a => existing.add(a)); }
     const onlyExisting = Util.chance(0.85);
-    let pairs = Object.entries(pt.wants).map(([k, w]) => [k, w * ((winter && (k === 'tent' || k === 'caravan' || k === 'camper')) ? 0.08 : 1) * (onlyExisting && !existing.has(k) ? 0 : 1)]).filter(p => p[1] > 0);
+    let pairs = Object.entries(pt.wants).map(([k, w]) => [k, w * (DATA.pitchWants.includes(k) ? season : accS) * (onlyExisting && !existing.has(k) ? 0 : 1)]).filter(p => p[1] > 0);
     if (!pairs.length) pairs = Object.entries(pt.wants);
     const want = forceWant || Util.weighted(pairs);
     const st = Game.stats;
@@ -140,7 +141,7 @@ const Guests = {
     let goals = null, route = null;
     if (g.goal === 'exit') goals = new Set([World.idx(World.entrance.x, World.entrance.y)]);
     else if (g.goal === 'home') { const sp = World.objects.get(this.parties.get(g.pid).spot); goals = sp ? new Set(World.doorTiles(sp).map(t => World.idx(t[0], t[1]))) : null; }
-    else if (g.goal === 'facility' || g.goal === 'reception') { const o = World.objects.get(g.goalObj); goals = o ? new Set(World.doorTiles(o).map(t => World.idx(t[0], t[1]))) : null; }
+    else if (g.goal === 'facility' || g.goal === 'reception' || g.goal === 'bin') { const o = World.objects.get(g.goalObj); goals = o ? new Set(World.doorTiles(o).map(t => World.idx(t[0], t[1]))) : null; }
     else if (g.goal === 'wander') { const t = World.randomReachableTile(sx, sy, 14); goals = t ? new Set([World.idx(t[0], t[1])]) : null; }
     if (goals && goals.size) route = World.bfs(sx, sy, goals);
     if (!route) {
@@ -202,6 +203,7 @@ const Guests = {
       return;
     }
     if (g.goal === 'wander') { g.state = 'idle'; g.timer = Util.rand(1, 3); return; }
+    if (g.goal === 'bin') { g.trash = false; this.think(g, 'bin'); g.state = 'idle'; g.timer = 0.4; return; }
     this.decide(g);
   },
 
@@ -292,6 +294,8 @@ const Guests = {
       if (def.rainBonus && rain) score *= 1.8;
       if (def.sunBonus && Game.weather === 'zon') score *= 1.4;
       if (def.evening && evening) score *= 1.6;
+      if (def.morning) score *= Game.t < 0.5 ? 1.6 : 0.5;
+      if (def.eveningBonus && evening) score *= 1.5;
       cands.push([o, score * score]);
     }
     if (!cands.length) return null;
@@ -301,6 +305,7 @@ const Guests = {
     const p = this.parties.get(g.pid);
     if (p.leaving) { this.startTrip(g, 'exit'); return; }
     if (Game.isNight()) { if (g.insideObj === p.spot && !this.onPath(g)) { g.state = 'sleep'; g.hidden = true; return; } this.startTrip(g, 'home'); return; }
+    if (g.trash && Util.chance(0.6)) { const bin = World.nearestBin(g.x, g.y, 14); if (bin) { this.startTrip(g, 'bin', bin); return; } }
     const order = Object.keys(THRESH).filter(k => g.needs[k] > THRESH[k]).sort((a, b) => (g.needs[b] - THRESH[b]) - (g.needs[a] - THRESH[a]));
     for (const need of order) {
       if (need === 'energy') {
@@ -386,7 +391,7 @@ const Guests = {
         g.needs[k] = Util.clamp(g.needs[k] + r * dt, 0, 100);
         if (g.needs[k] > 80 && !p.leaving) g.happy -= (g.needs[k] - 80) / 20 * NEED_PENALTY[k] * dt;
       }
-      if (g.needs.hunger > 85) this.think(g, 'hungry'); if (g.needs.hygiene > 85) this.think(g, 'dirty'); if (g.needs.fun > 85) this.think(g, 'bored'); if (g.needs.energy > 90) this.think(g, 'tired');
+      if (g.needs.hunger > 92 && !this.pursuing(g, 'hunger')) this.think(g, 'hungry'); if (g.needs.hygiene > 92 && !this.pursuing(g, 'hygiene')) this.think(g, 'dirty'); if (g.needs.fun > 92 && !this.pursuing(g, 'fun')) this.think(g, 'bored'); if (g.needs.energy > 90) this.think(g, 'tired');
       if (Game.weather === 'regen' && !g.hidden) { g.happy -= 0.12 * dt; if (Util.chance(dt * 0.02)) this.think(g, 'rain'); }
       if (Game.weather === 'zon' && !g.hidden && Util.chance(dt * 0.004)) { this.think(g, 'sun'); g.happy += 0.5; }
       if (g.state === 'home') g.happy += (0.25 + p.ambience * 1.5) * dt * (g.happy < 85 ? 1 : 0);
@@ -448,6 +453,8 @@ const Guests = {
       }
     }
   },
+  // is de gast al bezig deze behoefte te vervullen (onderweg, in de rij of binnen)?
+  pursuing(g, need) { return g.need === need && (g.state === 'use' || g.state === 'wait' || (g.state === 'walk' && g.goal === 'facility')); },
   maybeIdleThink(g, p) {
     if (p.ambience > 0.3 && Util.chance(0.2)) this.think(g, 'nature');
   },
@@ -456,8 +463,8 @@ const Guests = {
     if (!World.inb(tx, ty)) return;
     const i = World.idx(tx, ty);
     if (g.trash) {
-      if (World.binNear(tx, ty, 2)) { g.trash = false; }
-      else if (Util.chance(p.type === 'jongeren' ? 0.3 : 0.12)) { if (World.path[i] && World.litter[i] < 6) World.litter[i]++; g.trash = false; }
+      if (World.binNear(tx, ty)) { g.trash = false; }
+      else if (Util.chance(p.type === 'jongeren' ? 0.15 : 0.05)) { if (World.path[i] && World.litter[i] < 6) World.litter[i]++; g.trash = false; }
     }
     if (World.litter[i] >= 2) { g.happy -= 0.8; this.think(g, 'litter'); }
     if (Game.isNight() && !World.lampNear(tx, ty, 3)) { g.happy -= 0.15; if (Util.chance(0.3)) this.think(g, 'dark'); }
@@ -470,7 +477,7 @@ const Guests = {
     const p = this.parties.get(g.pid);
     const o = g.useObj ? World.objects.get(g.useObj) : null;
     switch (g.state) {
-      case 'enter': case 'walk': return g.goal === 'exit' || g.goal === 'gone' ? 'Vertrekt naar huis' : g.goal === 'reception' ? 'Op weg naar de receptie' : g.goal === 'home' || g.goal === 'homeIn' ? 'Op weg naar de staplek' : g.goal === 'facility' ? 'Op weg naar ' + (World.objects.get(g.goalObj) ? DATA.items[World.objects.get(g.goalObj).type].name.toLowerCase() : '...') : 'Wandelt rond';
+      case 'enter': case 'walk': return g.goal === 'exit' || g.goal === 'gone' ? 'Vertrekt naar huis' : g.goal === 'reception' ? 'Op weg naar de receptie' : g.goal === 'home' || g.goal === 'homeIn' ? 'Op weg naar de staplek' : g.goal === 'facility' ? 'Op weg naar ' + (World.objects.get(g.goalObj) ? DATA.items[World.objects.get(g.goalObj).type].name.toLowerCase() : '...') : g.goal === 'bin' ? 'Brengt afval weg' : 'Wandelt rond';
       case 'home': return 'Bij de ' + (p && World.objects.get(p.spot) ? DATA.items[World.objects.get(p.spot).type].name.toLowerCase() : 'staplek');
       case 'use': return o ? (DATA.items[o.type].hideText ? Util.cap(DATA.items[o.type].hideText) : DATA.items[o.type].service === 'checkin' ? 'Checkt in' : 'Bij ' + DATA.items[o.type].name.toLowerCase()) : 'Bezig';
       case 'wait': return 'Wacht in de rij';

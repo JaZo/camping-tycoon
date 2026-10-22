@@ -76,7 +76,15 @@ button.small:hover { background: #4caf50; }
 button.small.danger, button.danger { background: #8a3a30; }
 button.small.danger:hover, button.danger:hover { background: #c0392b; }
 
-#hint { position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%); background: rgba(20, 30, 20, 0.9); border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 6px 12px; font-size: 13px; z-index: 21; white-space: nowrap; }
+#hint .hb { background: #3b6e3f; color: #fff; border: 0; border-radius: 6px; padding: 4px 9px; margin-left: 4px; font-size: 12.5px; }
+#hint .hb:hover { background: #4caf50; }
+#hint .hb.primary { background: #4caf50; font-weight: 700; }
+.focus { margin: 8px 0; }
+.seg { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.seg-btn { background: rgba(255,255,255,0.08); color: #ddd; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+.seg-btn.on { background: #4caf50; color: #fff; border-color: #6fdc8c; }
+#modal-body select { background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 2px 4px; font: inherit; font-size: 12px; }
+#hint { position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%); background: rgba(20, 30, 20, 0.9); border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 6px 12px; font-size: 13px; z-index: 21; white-space: nowrap; max-width: calc(100vw - 20px); overflow-x: auto; }
 #minimap-wrap { position: fixed; right: 10px; bottom: 82px; z-index: 19; background: rgba(20, 30, 20, 0.8); padding: 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); }
 #minimap { display: block; width: 130px; height: 130px; image-rendering: pixelated; cursor: pointer; }
 
@@ -102,12 +110,27 @@ button.small.danger:hover, button.danger:hover { background: #c0392b; }
 .menu button:hover { background: #4caf50; }
 ul.tips { padding-left: 18px; line-height: 1.5; font-size: 13px; }
 
+/* ---- bevestiging ---- */
+#confirm { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.confirm-box { background: rgba(24, 34, 24, 0.98); border: 1px solid rgba(255,255,255,0.16); border-radius: 12px; padding: 18px 20px; width: min(420px, 100%); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+.confirm-box p { margin: 0 0 14px; line-height: 1.45; }
+.confirm-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.confirm-btns button { background: #3b6e3f; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 600; }
+.confirm-btns button.primary { background: #4caf50; }
+.confirm-btns button:hover { filter: brightness(1.15); }
+
 /* ---- startscherm ---- */
 #startscreen { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #4a7a3a 0%, #1f3a1b 100%); padding: 20px; }
 .start-box { background: rgba(20, 30, 20, 0.92); border: 1px solid rgba(255,255,255,0.14); border-radius: 16px; padding: 28px 32px; width: min(520px, 100%); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
 .start-box h1 { margin: 0 0 8px; font-size: 34px; color: #f6d365; }
 .start-box .sub { color: #d8d2c2; line-height: 1.5; margin: 0 0 18px; }
 .start-box label { display: block; margin: 10px 0; font-weight: 600; }
+.start-box h3 { margin: 14px 0 4px; font-size: 14px; color: #f6d365; }
+.start-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.small-note { font-size: 12px; margin: 4px 0 0; }
+.slot-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.06); border-radius: 8px; margin: 6px 0; }
+.slot-btns { display: flex; gap: 4px; flex: none; }
+.slot-btns button.small { margin: 0; }
 .start-box input, .start-box select { display: block; width: 100%; margin-top: 4px; padding: 9px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; font: inherit; }
 .start-buttons { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 .start-buttons button { flex: 1; padding: 12px; border-radius: 8px; border: 0; background: #3b6e3f; color: #fff; font-weight: 700; font-size: 15px; }
@@ -124,4 +147,6 @@ ul.tips { padding-left: 18px; line-height: 1.5; font-size: 13px; }
   #modal-body table { font-size: 12px; } #modal-body td { padding: 3px 4px; }
   #toasts { max-width: calc(100vw - 20px); top: 96px; }
   #toolbar .cat { min-width: 60px; padding: 4px 6px; font-size: 10.5px; }
+  .start-cols { grid-template-columns: 1fr; }
+  #hint { white-space: normal; bottom: 90px; }
 }

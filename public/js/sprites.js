@@ -15,8 +15,9 @@ const C = {
 };
 
 class S {
-  constructor(c, w, h, ox, oy) { this.c = c; this.w = w; this.h = h; this.ox = ox; this.oy = oy; }
-  iso(u, v, z) { return [this.ox + (u - v) * 32, this.oy + (u + v) * 16 - (z || 0)]; }
+  constructor(c, w, h, ox, oy, mirror) { this.c = c; this.w = w; this.h = h; this.ox = ox; this.oy = oy; this.mirror = !!mirror; }
+  // mirror: spiegeling over de diagonaal (u<->v). Daarmee 'draait' een object; beide voorgevels blijven zichtbaar.
+  iso(u, v, z) { if (this.mirror) { const t = u; u = v; v = t; } return [this.ox + (u - v) * 32, this.oy + (u + v) * 16 - (z || 0)]; }
   P(pts, fill, stroke, lw) {
     const c = this.c; c.beginPath();
     for (let i = 0; i < pts.length; i++) i ? c.lineTo(pts[i][0], pts[i][1]) : c.moveTo(pts[i][0], pts[i][1]);
@@ -29,7 +30,8 @@ class S {
   }
   box(u0, v0, u1, v1, z0, z1, col, o) {
     o = o || {};
-    const top = o.top || Util.shade(col, 0.18), left = o.left || Util.shade(col, -0.06), right = o.right || Util.shade(col, -0.26);
+    const top = o.top || Util.shade(col, 0.18); let left = o.left || Util.shade(col, -0.06), right = o.right || Util.shade(col, -0.26);
+    if (this.mirror) { const t = left; left = right; right = t; }
     this.P([this.iso(u0, v1, z0), this.iso(u1, v1, z0), this.iso(u1, v1, z1), this.iso(u0, v1, z1)], left);
     this.P([this.iso(u1, v0, z0), this.iso(u1, v1, z0), this.iso(u1, v1, z1), this.iso(u1, v0, z1)], right);
     this.P([this.iso(u0, v0, z1), this.iso(u1, v0, z1), this.iso(u1, v1, z1), this.iso(u0, v1, z1)], top, o.stroke, 0.7);
@@ -41,7 +43,8 @@ class S {
   }
   // zadeldak. alongU: nok loopt in u-richting.
   gable(u0, v0, u1, v1, z0, z1, alongU, col) {
-    const dark = Util.shade(col, -0.3), light = Util.shade(col, 0.08);
+    let dark = Util.shade(col, -0.3), light = Util.shade(col, 0.08);
+    if (this.mirror) { const t = dark; dark = light; light = t; }
     if (alongU) {
       const vm = (v0 + v1) / 2;
       if (z1 - z0 < (vm - v0) * 16) this.P([this.iso(u0, v0, z0), this.iso(u1, v0, z0), this.iso(u1, vm, z1), this.iso(u0, vm, z1)], dark);
@@ -54,13 +57,14 @@ class S {
     }
   }
   gableEnd(u0, v0, u1, v1, z0, z1, alongU, col) {
-    if (alongU) { const vm = (v0 + v1) / 2; this.P([this.iso(u1, v0, z0), this.iso(u1, v1, z0), this.iso(u1, vm, z1)], Util.shade(col, -0.26)); }
-    else { const um = (u0 + u1) / 2; this.P([this.iso(u0, v1, z0), this.iso(u1, v1, z0), this.iso(um, v1, z1)], Util.shade(col, -0.06)); }
+    const cR = this.mirror ? -0.06 : -0.26, cL = this.mirror ? -0.26 : -0.06;
+    if (alongU) { const vm = (v0 + v1) / 2; this.P([this.iso(u1, v0, z0), this.iso(u1, v1, z0), this.iso(u1, vm, z1)], Util.shade(col, cR)); }
+    else { const um = (u0 + u1) / 2; this.P([this.iso(u0, v1, z0), this.iso(u1, v1, z0), this.iso(um, v1, z1)], Util.shade(col, cL)); }
   }
   pyramid(u0, v0, u1, v1, z0, z1, col) {
     const a = this.iso((u0 + u1) / 2, (v0 + v1) / 2, z1);
-    this.P([this.iso(u0, v1, z0), this.iso(u1, v1, z0), a], Util.shade(col, 0.05));
-    this.P([this.iso(u1, v0, z0), this.iso(u1, v1, z0), a], Util.shade(col, -0.3));
+    this.P([this.iso(u0, v1, z0), this.iso(u1, v1, z0), a], Util.shade(col, this.mirror ? -0.3 : 0.05));
+    this.P([this.iso(u1, v0, z0), this.iso(u1, v1, z0), a], Util.shade(col, this.mirror ? 0.05 : -0.3));
   }
   cyl(u, v, r, z0, z1, col) {
     const [x, y0] = this.iso(u, v, z0), y1 = y0 - (z1 - z0), rx = r * 45, ry = r * 22.5, c = this.c;
@@ -144,7 +148,8 @@ class S {
     }
   }
   tentShape(u0, v0, u1, v1, hgt, col) { // nok langs u
-    const vm = (v0 + v1) / 2, dark = Util.shade(col, -0.3), light = Util.shade(col, 0.1);
+    const vm = (v0 + v1) / 2; let dark = Util.shade(col, -0.3), light = Util.shade(col, 0.1);
+    if (this.mirror) { const t = dark; dark = light; light = t; }
     this.P([this.iso(u0, v0, 0), this.iso(u1, v0, 0), this.iso(u1, vm, hgt), this.iso(u0, vm, hgt)], dark);
     this.P([this.iso(u0, v1, 0), this.iso(u1, v1, 0), this.iso(u1, vm, hgt), this.iso(u0, vm, hgt)], light);
     this.P([this.iso(u1, v0, 0), this.iso(u1, v1, 0), this.iso(u1, vm, hgt)], Util.shade(col, -0.15));
@@ -416,22 +421,29 @@ DRAW.wasserette = s => {
   const [wx, wy] = s.iso(0.85, 0.5, 12); s.circ(wx, wy, 5, '#fff', '#5d7a94', 1.2); s.circ(wx, wy, 3, C.glassD);
   s.flat(0.1, 0.1, 0.9, 0.9, 23, '#6e747a', '#555', 0.5);
 };
-DRAW.prullenbak = s => { s.cyl(0.5, 0.55, 0.16, 0, 12, '#2f7d3a'); const [x, y] = s.iso(0.5, 0.55, 12); s.ell(x, y, 7.5, 3.8, '#1f5a27'); };
-DRAW.bankje = s => {
-  s.box(0.2, 0.55, 0.8, 0.75, 0, 7, C.woodD);
-  s.box(0.2, 0.5, 0.8, 0.75, 7, 10, C.wood);
-  s.box(0.2, 0.45, 0.8, 0.52, 10, 20, C.wood);
+// Padobjecten staan aan de rand van het pad. variant: 0 midden, 1 v0-rand, 2 v1-rand, 3 u0-rand, 4 u1-rand.
+const EDGE = { 0: [0.5, 0.5], 1: [0.5, 0.18], 2: [0.5, 0.82], 3: [0.18, 0.5], 4: [0.82, 0.5] };
+function edgeFrame(s, v) { const m = v === 3 || v === 4; if (m) s.mirror = !s.mirror; return EDGE[m ? v - 2 : v] || EDGE[0]; }
+DRAW.prullenbak = (s, v) => { const [cu, cv] = edgeFrame(s, v); s.cyl(cu, cv + 0.03, 0.16, 0, 12, '#2f7d3a'); const [x, y] = s.iso(cu, cv + 0.03, 12); s.ell(x, y, 7.5, 3.8, '#1f5a27'); };
+DRAW.bankje = (s, v) => {
+  const [, cv0] = edgeFrame(s, v); const cv = v ? cv0 : 0.6;
+  const back = (v === 2 || v === 4) ? 1 : -1; // rugleuning naar de buitenkant van het pad
+  const s0 = back < 0 ? cv - 0.05 : cv - 0.2, s1 = back < 0 ? cv + 0.2 : cv + 0.05, b0 = back < 0 ? cv - 0.12 : cv + 0.05, b1 = back < 0 ? cv - 0.05 : cv + 0.12;
+  s.box(0.2, s0, 0.8, s1, 0, 7, C.woodD);
+  s.box(0.2, s0, 0.8, s1, 7, 10, C.wood);
+  s.box(0.2, b0, 0.8, b1, 10, 20, C.wood);
 };
-DRAW.lantaarn = s => { const [x, y] = s.iso(0.5, 0.5, 0); s.c.fillStyle = '#444'; s.c.fillRect(x - 1.5, y - 34, 3, 34); s.c.fillRect(x - 4, y - 36, 8, 2); s.P([[x - 4, y - 36], [x + 4, y - 36], [x + 3, y - 42], [x - 3, y - 42]], '#fff1b0', '#444'); };
+DRAW.lantaarn = (s, v) => { const [cu, cv] = edgeFrame(s, v); const [x, y] = s.iso(cu, cv, 0); s.c.fillStyle = '#444'; s.c.fillRect(x - 1.5, y - 34, 3, 34); s.c.fillRect(x - 4, y - 36, 8, 2); s.P([[x - 4, y - 36], [x + 4, y - 36], [x + 3, y - 42], [x - 3, y - 42]], '#fff1b0', '#444'); };
 DRAW.picknicktafel = s => {
   s.box(0.2, 0.2, 0.8, 0.35, 0, 8, C.wood); s.box(0.2, 0.65, 0.8, 0.8, 0, 8, C.wood);
   s.box(0.2, 0.4, 0.8, 0.6, 10, 14, C.woodL); s.lineIso(0.5, 0.5, 0, 0.5, 0.5, 10, C.woodD, 2);
 };
-DRAW.informatiebord = s => {
-  s.box(0.2, 0.45, 0.8, 0.55, 12, 32, C.woodD);
-  s.faceRect('L', 0.55, 0.25, 0.75, 14, 30, '#f8f3e0', '#5a3a1e');
-  s.faceRect('L', 0.55, 0.3, 0.5, 16, 22, '#7fbb5f'); s.faceRect('L', 0.55, 0.5, 0.7, 20, 28, '#4f94cf'); s.faceRect('L', 0.55, 0.3, 0.7, 23, 24, '#c9b99a');
-  s.lineIso(0.3, 0.5, 0, 0.3, 0.5, 12, C.woodD, 2); s.lineIso(0.7, 0.5, 0, 0.7, 0.5, 12, C.woodD, 2);
+DRAW.informatiebord = (s, v) => {
+  const [, cv] = edgeFrame(s, v); const d = cv - 0.5;
+  s.box(0.2, 0.45 + d, 0.8, 0.55 + d, 12, 32, C.woodD);
+  s.faceRect('L', 0.55 + d, 0.25, 0.75, 14, 30, '#f8f3e0', '#5a3a1e');
+  s.faceRect('L', 0.55 + d, 0.3, 0.5, 16, 22, '#7fbb5f'); s.faceRect('L', 0.55 + d, 0.5, 0.7, 20, 28, '#4f94cf'); s.faceRect('L', 0.55 + d, 0.3, 0.7, 23, 24, '#c9b99a');
+  s.lineIso(0.3, 0.5 + d, 0, 0.3, 0.5 + d, 12, C.woodD, 2); s.lineIso(0.7, 0.5 + d, 0, 0.7, 0.5 + d, 12, C.woodD, 2);
 };
 DRAW.fietsverhuur = s => {
   s.box(0.1, 0.1, 0.5, 0.9, 0, 18, C.wood); s.flat(0.05, 0.05, 0.55, 0.95, 19, C.roofGrey);
@@ -559,6 +571,98 @@ DRAW.tafeltennis = s => {
 };
 ZONES.tafeltennis = [[-0.4, 0.2, 0.05, 0.8], [0.95, 0.2, 1.4, 0.8]];
 
+// --- extra eetgelegenheden ---
+DRAW.pizzeria = s => {
+  s.flat(0, 0, 3, 2, 0, '#c8c0b0');
+  s.box(0.15, 0.15, 2.85, 1.85, 0, 28, '#f3e2c0');
+  s.window('L', 1.85, 0.3, 1.0, 8, 22); s.door('L', 1.85, 1.3, 1.65, 22, '#8a3a2a'); s.window('L', 1.85, 1.9, 2.6, 8, 22);
+  s.window('R', 2.85, 0.4, 1.4, 8, 22);
+  for (let i = 0; i < 9; i++) s.P([s.iso(0.15 + i * 0.3, 1.85, 24), s.iso(0.15 + (i + 1) * 0.3, 1.85, 24), s.iso(0.15 + (i + 1) * 0.3, 2.05, 19), s.iso(0.15 + i * 0.3, 2.05, 19)], i % 2 ? '#fff' : '#c0392b');
+  s.flat(0.05, 0.05, 2.95, 1.95, 29, '#b5542f', '#8a3a2a', 0.7);
+  const [px, py] = s.iso(1.5, 0.5, 29); s.circ(px, py - 8, 9, '#f6d365', '#c0392b', 2); s.circ(px - 3, py - 10, 1.8, '#c0392b'); s.circ(px + 3, py - 7, 1.8, '#c0392b'); s.circ(px + 1, py - 12, 1.5, '#c0392b');
+  s.faceRect('L', 1.9, 0.3, 2.7, 25, 30, '#2e7d32'); s.text(...s.iso(1.5, 1.9, 26), 'PIZZERIA', 5, '#fff');
+};
+DRAW.bakker = s => {
+  s.flat(0, 0, 2, 1, 0, '#c8c0b0');
+  s.box(0.15, 0.15, 1.85, 0.85, 0, 24, '#e8c9a0');
+  s.faceRect('L', 0.85, 0.3, 1.1, 6, 18, C.glass, '#fff'); s.door('L', 0.85, 1.3, 1.65, 20, '#6b4a2b');
+  for (let i = 0; i < 6; i++) s.P([s.iso(0.15 + i * 0.2833, 0.85, 21), s.iso(0.15 + (i + 1) * 0.2833, 0.85, 21), s.iso(0.15 + (i + 1) * 0.2833, 1.05, 16), s.iso(0.15 + i * 0.2833, 1.05, 16)], i % 2 ? '#f6e7c1' : '#8a5a2b');
+  s.flat(0.05, 0.05, 1.95, 0.95, 25, '#7d5a3a', '#5a3a1e', 0.6);
+  s.faceRect('L', 0.9, 0.3, 1.7, 25, 30, '#5a3a1e'); s.text(...s.iso(1.0, 0.9, 26), 'BAKKER', 5, '#f6d365');
+  const [bx, by] = s.iso(0.5, 0.9, 32); s.ell(bx, by, 5, 3, '#d9a060', '#8a5a2b', 0.8);
+};
+DRAW.ijssalon = s => {
+  s.cyl(0.5, 0.5, 0.36, 0, 18, '#f7c6d9');
+  const [x, y] = s.iso(0.5, 0.5, 18);
+  s.ell(x, y, 19, 9.5, '#e8528f'); s.ell(x, y - 2, 14, 7, '#fff');
+  s.P([[x - 4, y - 4], [x + 4, y - 4], [x, y - 16]], '#d9a060'); s.circ(x, y - 15, 4, '#f7c6d9'); s.circ(x - 2.5, y - 19, 3.5, '#fff'); s.circ(x + 2.5, y - 18, 3.2, '#8d5a3a');
+  s.text(x, y + 10, 'IJS', 5, '#8a2a5a');
+};
+// --- binnenvoorzieningen ---
+DRAW.binnenzwembad = s => {
+  s.flat(0, 0, 3, 3, 0, '#c8c0b0');
+  s.box(0.15, 0.15, 2.85, 2.85, 0, 34, '#cfe7f2');
+  s.faceRect('L', 2.85, 0.3, 2.7, 6, 26, '#3aa0d8', '#fff'); s.faceRect('R', 2.85, 0.3, 2.7, 6, 26, '#2f8fc4', '#fff');
+  for (let i = 1; i < 5; i++) { s.lineIso(0.3 + i * 0.48, 2.85, 6, 0.3 + i * 0.48, 2.85, 26, '#fff', 0.8); s.lineIso(2.85, 0.3 + i * 0.48, 6, 2.85, 0.3 + i * 0.48, 26, '#fff', 0.8); }
+  s.door('L', 2.85, 1.3, 1.7, 24, '#2e6f9a');
+  s.gableEnd(0.15, 0.15, 2.85, 2.85, 34, 50, true, '#cfe7f2');
+  s.gable(0.05, 0.05, 2.95, 2.95, 33, 50, true, '#8a9199');
+  s.P([s.iso(0.4, 2.3, 38), s.iso(2.6, 2.3, 38), s.iso(2.6, 1.7, 47), s.iso(0.4, 1.7, 47)], 'rgba(159,211,238,0.9)', '#6e747a', 0.6);
+  s.faceRect('L', 2.9, 0.4, 2.6, 27, 33, '#2e86c1'); s.text(...s.iso(1.5, 2.9, 28.5), 'ZWEMPARADIJS', 4.6, '#fff');
+};
+DRAW.binnenspeeltuin = s => {
+  s.flat(0, 0, 2, 2, 0, '#c8c0b0');
+  s.box(0.15, 0.15, 1.85, 1.85, 0, 30, '#f6d365');
+  s.faceRect('L', 1.85, 0.3, 1.0, 6, 24, C.glass, '#fff'); s.door('L', 1.85, 1.2, 1.6, 24, '#e74c3c');
+  const [wx, wy] = s.iso(0.65, 1.85, 6); s.P([[wx - 6, wy - 2], [wx + 6, wy - 8], [wx + 6, wy - 12], [wx - 6, wy - 6]], '#e74c3c'); s.circ(wx - 2, wy - 14, 2.5, '#3498db'); s.circ(wx + 3, wy - 16, 2, '#2ecc71');
+  s.window('R', 1.85, 0.3, 0.9, 8, 22); s.window('R', 1.85, 1.1, 1.6, 8, 22);
+  s.flat(0.05, 0.05, 1.95, 1.95, 31, '#c0392b', '#8a2a1a', 0.6);
+  s.bunting(0.1, 1.95, 1.95, 1.95, 31);
+  s.faceRect('L', 1.9, 0.3, 1.7, 25, 30, '#3498db'); s.text(...s.iso(1.0, 1.9, 26), 'SPEELPARADIJS', 4.2, '#fff');
+};
+DRAW.bowlingbaan = s => {
+  s.flat(0, 0, 3, 2, 0, '#c8c0b0');
+  s.box(0.15, 0.15, 2.85, 1.85, 0, 30, '#3b3b55');
+  s.door('L', 1.85, 1.3, 1.7, 24, '#e74c3c'); s.faceRect('L', 1.85, 0.3, 1.1, 14, 22, '#f1c40f', '#fff');
+  s.faceRect('R', 2.85, 0.4, 1.4, 14, 22, '#9b59b6', '#fff');
+  s.flat(0.05, 0.05, 2.95, 1.95, 31, '#2b2b40', '#1b1b2a', 0.6);
+  s.faceRect('L', 1.9, 0.3, 2.7, 25, 31, '#111'); s.text(...s.iso(1.9, 1.9, 26), 'BOWLING', 5, '#ff5fa2');
+  for (let i = 0; i < 3; i++) { const [kx, ky] = s.iso(0.55 + i * 0.22, 1.92, 27); s.ell(kx, ky - 1, 2.2, 3, '#fff'); s.circ(kx, ky - 4.5, 1.6, '#fff'); s.c.fillStyle = '#e74c3c'; s.c.fillRect(kx - 2, ky - 2.5, 4, 1); }
+};
+DRAW.fitness = s => {
+  s.flat(0, 0, 2, 2, 0, '#c8c0b0');
+  s.box(0.15, 0.15, 1.85, 1.85, 0, 30, '#dfe4ea');
+  s.faceRect('L', 1.85, 0.3, 1.1, 6, 24, C.glass, '#fff'); s.door('L', 1.85, 1.3, 1.65, 24, '#2c3e50');
+  s.faceRect('R', 1.85, 0.3, 1.6, 6, 24, C.glass, '#fff');
+  s.flat(0.05, 0.05, 1.95, 1.95, 31, '#6e747a', '#555', 0.6);
+  s.faceRect('L', 1.9, 0.3, 1.7, 25, 31, '#2c3e50'); s.text(...s.iso(1.0, 1.9, 26), 'FITNESS', 5, '#2ecc71');
+  const [dx, dy] = s.iso(0.5, 1.92, 34); s.line(dx - 6, dy, dx + 6, dy, '#2ecc71', 2); s.c.fillStyle = '#2ecc71'; s.c.fillRect(dx - 8, dy - 3, 3, 6); s.c.fillRect(dx + 5, dy - 3, 3, 6);
+};
+DRAW.bioscoop = s => {
+  s.flat(0, 0, 2, 2, 0, '#c8c0b0');
+  s.box(0.15, 0.15, 1.85, 1.85, 0, 34, '#6b2f3a');
+  s.door('L', 1.85, 0.8, 1.2, 24, '#2b2b2b'); s.faceRect('L', 1.85, 0.85, 1.15, 10, 22, '#f6d365');
+  for (let i = 0; i < 2; i++) s.faceRect('L', 1.85, 0.3 + i * 1.1, 0.6 + i * 1.1, 8, 20, ['#3498db', '#e67e22'][i], '#fff');
+  s.flat(0.05, 0.05, 1.95, 1.95, 35, '#4a1f28', '#2b0f15', 0.6);
+  s.P([s.iso(0.1, 1.85, 26), s.iso(1.9, 1.85, 26), s.iso(1.9, 2.1, 21), s.iso(0.1, 2.1, 21)], '#f6d365', '#c9a227', 0.8);
+  s.faceRect('L', 1.9, 0.2, 1.8, 27, 34, '#fff'); s.text(...s.iso(1.0, 1.9, 28.5), 'CINEMA', 5.5, '#c0392b');
+  const [fx, fy] = s.iso(1.0, 0.3, 35); s.circ(fx, fy - 6, 6, '#2b2b2b'); s.circ(fx, fy - 6, 2, '#6b2f3a'); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; s.circ(fx + Math.cos(a) * 3.5, fy - 6 + Math.sin(a) * 3.5, 1, '#6b2f3a'); }
+};
+// --- afval en camperservice ---
+DRAW.afvalstation = s => {
+  s.flat(0.05, 0.05, 1.95, 0.95, 0, '#9a9a96', '#777', 0.6);
+  const cols = ['#2f7d3a', '#2e86c1', '#555'];
+  for (let i = 0; i < 3; i++) { const u0 = 0.15 + i * 0.58; s.box(u0, 0.2, u0 + 0.45, 0.8, 0, 16, cols[i]); const [lx, ly] = s.iso(u0 + 0.225, 0.5, 16); s.ell(lx, ly, 9, 4.5, Util.shade(cols[i], -0.3)); s.circ(lx, ly, 2.5, '#222'); }
+  s.lineIso(1.9, 0.9, 0, 1.9, 0.9, 20, '#555', 1.5); s.faceRect('L', 0.9, 1.75, 2.05, 14, 20, '#f6e7c1', '#555'); s.text(...s.iso(1.9, 0.9, 15.5), 'AFVAL', 3.5, '#333');
+};
+DRAW.camperservice = s => {
+  s.flat(0.05, 0.05, 0.95, 0.95, 0, '#9a9a96', '#777', 0.6);
+  s.flat(0.3, 0.3, 0.7, 0.7, 0.5, '#444'); for (let i = 1; i < 4; i++) s.lineIso(0.3 + i * 0.1, 0.3, 0.6, 0.3 + i * 0.1, 0.7, 0.6, '#777', 0.6);
+  tap(s, 0.2, 0.8);
+  s.lineIso(0.85, 0.15, 0, 0.85, 0.15, 22, '#555', 1.5); s.faceRect('L', 0.15, 0.6, 1.1, 14, 24, '#2e86c1', '#fff');
+  const [cx, cy] = s.iso(0.85, 0.15, 19); s.c.fillStyle = '#fff'; s.c.fillRect(cx - 6, cy - 2, 12, 5); s.c.fillRect(cx + 2, cy - 5, 4, 3); s.circ(cx - 3, cy + 3, 1.5, '#fff'); s.circ(cx + 3, cy + 3, 1.5, '#fff');
+};
+
 // --- Voertuigen op staplekken (zelfde footprint als de plek) ---
 const VEH = {
   tent(s, w, h, col) {
@@ -589,25 +693,26 @@ const VEH = {
 const Sprites = {
   cache: new Map(),
   season: 'lente',
-  make(w, h, sh, fn, variant) {
+  make(w, h, sh, fn, variant, mirror) {
+    const ph = mirror ? w : h;
     const SW = (w + h) * 32 + 16, SH = (w + h) * 16 + sh + 12;
     const cv = document.createElement('canvas'); cv.width = SW * 2; cv.height = SH * 2;
     const c = cv.getContext('2d'); c.scale(2, 2);
-    const s = new S(c, w, h, h * 32 + 8, sh + 6);
+    const s = new S(c, w, h, ph * 32 + 8, sh + 6, mirror);
     fn(s, variant || 0);
     return { cv, ox: s.ox, oy: s.oy, w: SW, h: SH };
   },
-  get(id, variant) {
+  get(id, variant, mirror) {
     const def = DATA.items[id]; variant = variant || 0;
-    const key = id + '|' + variant + (def.seasonal ? '|' + this.season : '');
+    const key = id + '|' + variant + (mirror ? '|m' : '') + (def.seasonal ? '|' + this.season : '');
     let sp = this.cache.get(key);
-    if (!sp) { sp = this.make(def.w, def.h, def.sh || 48, (s, v) => DRAW[id](s, v), variant); this.cache.set(key, sp); }
+    if (!sp) { sp = this.make(def.w, def.h, def.sh || 48, (s, v) => DRAW[id](s, v), variant, mirror); this.cache.set(key, sp); }
     return sp;
   },
-  vehicle(kind, w, h, colIdx) {
-    const key = 'veh|' + kind + '|' + w + 'x' + h + '|' + colIdx;
+  vehicle(kind, w, h, colIdx, mirror) {
+    const key = 'veh|' + kind + '|' + w + 'x' + h + '|' + colIdx + (mirror ? '|m' : '');
     let sp = this.cache.get(key);
-    if (!sp) { sp = this.make(w, h, 44, s => VEH[kind](s, w, h, C.tents[colIdx % C.tents.length])); this.cache.set(key, sp); }
+    if (!sp) { sp = this.make(w, h, 44, s => VEH[kind](s, w, h, C.tents[colIdx % C.tents.length]), 0, mirror); this.cache.set(key, sp); }
     return sp;
   },
   clearSeasonal() { for (const k of [...this.cache.keys()]) if (k.includes('|lente') || k.includes('|zomer') || k.includes('|herfst') || k.includes('|winter')) this.cache.delete(k); },
@@ -638,6 +743,7 @@ const Sprites = {
       case 'grind': { dia(0.7); c.fillStyle = '#cfc2a3'; c.fill(); dots(26, ['#b8aa88', '#e0d5b8', '#c4b593'], 1.5, 1.5); break; }
       case 'tegel': { dia(0.7); c.fillStyle = '#b4b4b0'; c.fill(); c.strokeStyle = '#9a9a96'; c.lineWidth = 1; c.beginPath(); c.moveTo(16, 8); c.lineTo(48, 24); c.moveTo(48, 8); c.lineTo(16, 24); c.stroke(); dots(6, ['#c2c2be', '#a8a8a4'], 2, 1); break; }
       case 'asfalt': { dia(0.7); c.fillStyle = C.asphalt; c.fill(); dots(10, ['#666', '#555'], 1.5, 1.5); break; }
+      case 'unowned': { dia(0.7); c.fillStyle = 'rgba(10,22,10,0.42)'; c.fill(); break; }
     }
     this.groundCache.set(key, cv);
     return cv;

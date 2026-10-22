@@ -3,15 +3,15 @@
 // Personeel en dieren
 // ---------------------------------------------------------------------------
 const Staff = {
-  list: new Map(), nextId: 1,
-  reset() { this.list = new Map(); this.nextId = 1; },
+  list: new Map(), nextId: 1, claims: new Map(),
+  reset() { this.list = new Map(); this.nextId = 1; this.claims = new Map(); },
   hire(role) {
     const def = DATA.staff[role];
     const s = { id: this.nextId++, role, name: Names.adultName() + ' ' + Util.pick(Names.surnames), hired: Game.day,
       x: World.entrance.x + 0.5, y: World.entrance.y + 0.5, ox: Util.rand(-0.2, 0.2), oy: Util.rand(-0.2, 0.2), dir: -1, phase: Math.random() * 6,
       speed: 2.6, skin: Util.pick(C.skins), hair: Util.pick(C.hairs), shirt: def.color, pants: role === 'schoonmaker' ? '#2a4d8f' : role === 'monteur' ? '#4a4a4a' : '#333',
       state: 'idle', task: null, target: 0, route: null, ri: 0, dest: null, timer: Util.rand(0, 1), hidden: false, walking: false, idleTime: 0,
-      tasksDone: 0 };
+      tasksDone: 0, focus: 'alles' };
     this.list.set(s.id, s);
     UI.notify(def.name + ' ' + s.name + ' is in dienst genomen (' + Util.euro(def.wage) + ' per dag).', 'info');
     return s;
@@ -38,11 +38,24 @@ const Staff = {
   pickTask(s) {
     World.recomputeReach();
     if (s.role === 'schoonmaker') {
-      const r = World.bfs(Math.floor(s.x), Math.floor(s.y), i => World.litter[i] > 0);
-      if (r) { s.route = r; s.ri = 0; s.state = 'walk'; s.task = 'litter'; s.target = 0; return; }
-      const thr = s.idleTime > 20 ? 12 : 30;
-      const san = [...World.objects.values()].filter(o => DATA.items[o.type].dirtRate && o.dirt > thr && World.isReachable(o)).sort((a, b) => b.dirt - a.dirt);
-      for (const o of san) if (this.goToObject(s, o, 'clean')) return;
+      this.releaseClaims(s);
+      const focus = s.focus || 'alles', sx = Math.floor(s.x), sy = Math.floor(s.y);
+      let litterRoute = null;
+      if (focus !== 'sanitair') litterRoute = World.bfs(sx, sy, i => World.litter[i] > 0 && !this.claimedTile(i, s.id));
+      let san = null;
+      if (focus !== 'afval') {
+        const thr = focus === 'sanitair' ? 15 : (s.idleTime > 20 ? 15 : 25);
+        const list = [...World.objects.values()].filter(o => DATA.items[o.type].dirtRate && o.dirt > thr && World.isReachable(o) && !this.claimedObject(o, s.id)).sort((a, b) => b.dirt - a.dirt);
+        san = list[0] || null;
+      }
+      // sanitair gaat voor als het echt vies is of het afval ver weg ligt; anders het afval
+      if (san && (!litterRoute || san.dirt > 55 || litterRoute.length > 12)) { if (this.goToObject(s, san, 'clean')) { san.cleanerId = s.id; return; } }
+      if (litterRoute) {
+        s.route = litterRoute; s.ri = 0; s.state = 'walk'; s.task = 'litter'; s.target = 0;
+        const last = litterRoute.length ? litterRoute[litterRoute.length - 1] : [sx, sy];
+        s.claim = World.idx(last[0], last[1]); this.claims.set(s.claim, s.id); return;
+      }
+      if (san && this.goToObject(s, san, 'clean')) { san.cleanerId = s.id; return; }
       this.wander(s); return;
     }
     if (s.role === 'monteur') {
@@ -66,6 +79,21 @@ const Staff = {
       }
       this.wander(s); return;
     }
+  },
+  // claims voorkomen dat alle schoonmakers naar hetzelfde stuk afval of hetzelfde gebouw lopen
+  claimedTile(i, selfId) {
+    const c = this.claims.get(i); if (!c || c === selfId) return false;
+    const o = this.list.get(c); if (!o || o.task !== 'litter' || o.claim !== i) { this.claims.delete(i); return false; }
+    return true;
+  },
+  claimedObject(o, selfId) {
+    if (!o.cleanerId || o.cleanerId === selfId) return false;
+    const c = this.list.get(o.cleanerId); if (!c || c.target !== o.id || c.task !== 'clean') { o.cleanerId = 0; return false; }
+    return true;
+  },
+  releaseClaims(s) {
+    if (s.claim !== undefined) { if (this.claims.get(s.claim) === s.id) this.claims.delete(s.claim); s.claim = undefined; }
+    if (s.target) { const o = World.objects.get(s.target); if (o && o.cleanerId === s.id) o.cleanerId = 0; }
   },
   updateOne(s, dt) {
     switch (s.state) {
@@ -108,6 +136,7 @@ const Staff = {
     else if (s.task === 'repair' && o) { o.broken = false; o.cond = 100; s.tasksDone++; UI.notify(DATA.items[o.type].name + ' is gerepareerd door ' + s.name + '.', 'good'); }
     else if (s.task === 'service' && o) { o.cond = Math.min(100, o.cond + 45); s.tasksDone++; }
     else if (s.task === 'perform' || s.task === 'campfire') s.tasksDone++;
+    this.releaseClaims(s);
     s.task = null; s.target = 0; s.state = 'idle'; s.timer = 0.3;
   },
   statusText(s) {

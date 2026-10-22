@@ -13,29 +13,36 @@ const World = {
   reachVersion: -1,
   _bfsVisit: null, _bfsPrev: null, _bfsStamp: 0, _queue: null,
 
-  init(w, h) {
+  // owned: het gekochte deel van de kaart {x0,y0,x1,y1} (x1/y1 exclusief). entrance: optioneel, anders midden onderaan het eigendom.
+  init(w, h, owned, entrance) {
     this.W = w; this.H = h;
     const n = w * h;
     this.terrain = new Uint8Array(n); this.path = new Uint8Array(n); this.obj = new Int32Array(n); this.litter = new Uint8Array(n);
     this.objects = new Map(); this.nextId = 1;
-    this.entrance = { x: Math.floor(w / 2), y: h - 1 };
+    this.owned = owned ? { x0: owned.x0, y0: owned.y0, x1: owned.x1, y1: owned.y1 } : { x0: 0, y0: 0, x1: w, y1: h };
+    this.entrance = entrance ? { x: entrance.x, y: entrance.y } : { x: Math.floor((this.owned.x0 + this.owned.x1) / 2), y: this.owned.y1 - 1 };
     this.reach = new Uint8Array(n); this.reachVersion = -1; this.pathVersion = 0;
-    this._bfsVisit = new Int32Array(n); this._bfsPrev = new Int32Array(n); this._dist = new Int32Array(n); this._queue = new Int32Array(n); this._bfsStamp = 0;
+    this._bfsVisit = new Int32Array(n); this._bfsPrev = new Int32Array(n); this._dist = new Int32Array(n); this._queue = new Int32Array(n); this._distBuf = new Int32Array(n); this._bfsStamp = 0;
     this.path[this.idx(this.entrance.x, this.entrance.y)] = 1;
     this.path[this.idx(this.entrance.x, this.entrance.y - 1)] = 1;
   },
   idx(x, y) { return y * this.W + x; },
   inb(x, y) { return x >= 0 && y >= 0 && x < this.W && y < this.H; },
   isEntrance(x, y) { return x === this.entrance.x && y === this.entrance.y; },
+  isOwned(x, y) { if (this.genMode) return true; const o = this.owned; return x >= o.x0 && x < o.x1 && y >= o.y0 && y < o.y1; },
+  isOwnedStrict(x, y) { const o = this.owned; return x >= o.x0 && x < o.x1 && y >= o.y0 && y < o.y1; },
+  ownedW() { return this.owned.x1 - this.owned.x0; }, ownedH() { return this.owned.y1 - this.owned.y0; },
   objAt(x, y) { if (!this.inb(x, y)) return null; const id = this.obj[this.idx(x, y)]; return id ? this.objects.get(id) : null; },
   hasPath(x, y) { return this.inb(x, y) && this.path[this.idx(x, y)] > 0; },
   // loopbaar voor gasten/personeel: padtegels, plus tegels van 'walkable' objecten op een pad (bankje, slagboom, lantaarn...)
   walkable(x, y) { return this.hasPath(x, y); },
 
   // ---- plaatsing ------------------------------------------------------------
-  canPlace(def, x, y) {
+  canPlace(def, x, y, mirror) {
+    const NOT_OWNED = { ok: false, reason: 'Deze grond is niet van jou' };
     if (def.kind === 'path') {
       if (!this.inb(x, y)) return { ok: false, reason: 'Buiten het terrein' };
+      if (!this.isOwned(x, y)) return NOT_OWNED;
       const i = this.idx(x, y);
       if (this.terrain[i] === 2) return { ok: false, reason: 'Niet op water' };
       if (this.obj[i]) { const o = this.objects.get(this.obj[i]); if (!(DATA.items[o.type].onPath || DATA.items[o.type].kind === 'pathobj')) return { ok: false, reason: 'Hier staat al iets' }; }
@@ -44,6 +51,7 @@ const World = {
     }
     if (def.kind === 'terrain') {
       if (!this.inb(x, y)) return { ok: false, reason: 'Buiten het terrein' };
+      if (!this.isOwned(x, y)) return NOT_OWNED;
       const i = this.idx(x, y);
       if (this.terrain[i] === def.terrain) return { ok: false, reason: 'Is al ' + def.name.toLowerCase() };
       if (this.obj[i] || this.path[i]) return { ok: false, reason: 'Eerst het object of pad weghalen' };
@@ -52,6 +60,7 @@ const World = {
     }
     if (def.kind === 'animal') {
       if (!this.inb(x, y)) return { ok: false, reason: 'Buiten het terrein' };
+      if (!this.isOwned(x, y)) return NOT_OWNED;
       const i = this.idx(x, y);
       if (def.water) { if (this.terrain[i] !== 2) return { ok: false, reason: 'Eenden horen op het water' }; return { ok: true }; }
       if (this.terrain[i] === 2) return { ok: false, reason: 'Niet op water' };
@@ -60,6 +69,7 @@ const World = {
     }
     if (def.kind === 'pathobj') {
       if (!this.inb(x, y)) return { ok: false, reason: 'Buiten het terrein' };
+      if (!this.isOwned(x, y)) return NOT_OWNED;
       const i = this.idx(x, y);
       if (!this.path[i]) return { ok: false, reason: 'Moet op een pad staan' };
       if (this.obj[i]) return { ok: false, reason: 'Hier staat al iets' };
@@ -67,9 +77,11 @@ const World = {
       return { ok: true };
     }
     // spot / facility / deco
-    for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) {
+    const w = mirror ? def.h : def.w, h = mirror ? def.w : def.h;
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) {
       const tx = x + dx, ty = y + dy;
       if (!this.inb(tx, ty)) return { ok: false, reason: 'Buiten het terrein' };
+      if (!this.isOwned(tx, ty)) return NOT_OWNED;
       const i = this.idx(tx, ty);
       if (this.terrain[i] === 2) return { ok: false, reason: 'Niet op water' };
       if (this.obj[i]) return { ok: false, reason: 'Hier staat al iets' };
@@ -77,7 +89,7 @@ const World = {
       if (this.isEntrance(tx, ty)) return { ok: false, reason: 'Niet op de ingang' };
     }
     if (def.kind === 'facility' || def.kind === 'spot') {
-      if (!this.adjacentToPath(x, y, def.w, def.h)) return { ok: true, warn: 'Grenst niet aan een pad: onbereikbaar' };
+      if (!this.adjacentToPath(x, y, w, h)) return { ok: true, warn: 'Grenst niet aan een pad: onbereikbaar' };
     }
     return { ok: true };
   },
@@ -86,14 +98,46 @@ const World = {
     for (let dy = 0; dy < h; dy++) { if (this.hasPath(x - 1, y + dy) || this.hasPath(x + w, y + dy)) return true; }
     return false;
   },
-  place(def, x, y, variant) {
-    const o = { id: this.nextId++, type: def.id, x, y, w: def.w, h: def.h, variant: variant || 0, cond: 100, broken: false, dirt: 0, users: [], occupant: 0, open: true, built: Game.day };
+  place(def, x, y, variant, mirror) {
+    const w = mirror ? def.h : def.w, h = mirror ? def.w : def.h;
+    const o = { id: this.nextId++, type: def.id, x, y, w, h, mirror: !!mirror, variant: variant || 0, cond: 100, broken: false, dirt: 0, users: [], occupant: 0, open: true, built: Game.day, natural: !!this.genMode };
     this.objects.set(o.id, o);
-    for (let dy = 0; dy < def.h; dy++) for (let dx = 0; dx < def.w; dx++) this.obj[this.idx(x + dx, y + dy)] = o.id;
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) this.obj[this.idx(x + dx, y + dy)] = o.id;
     if (def.id === 'slagboom') o.variant = (this.hasPath(x, y - 1) || this.hasPath(x, y + 1)) && !(this.hasPath(x - 1, y) || this.hasPath(x + 1, y)) ? 1 : 0;
     if (def.id === 'parkeerplaats') o.variant = Util.randInt(0, 6);
     this.pathVersion++;
     return o;
+  },
+  // bestaand object (met behoud van staat) opnieuw neerzetten, bijv. na verplaatsen of draaien
+  placeExisting(o, x, y, mirror) {
+    const def = DATA.items[o.type];
+    o.x = x; o.y = y; o.mirror = !!mirror; o.w = mirror ? def.h : def.w; o.h = mirror ? def.w : def.h;
+    this.objects.set(o.id, o);
+    for (let dy = 0; dy < o.h; dy++) for (let dx = 0; dx < o.w; dx++) this.obj[this.idx(x + dx, y + dy)] = o.id;
+    if (def.id === 'slagboom') o.variant = (this.hasPath(x, y - 1) || this.hasPath(x, y + 1)) && !(this.hasPath(x - 1, y) || this.hasPath(x + 1, y)) ? 1 : 0;
+    o._doors = null; o._doorsV = -1; this.pathVersion++;
+    return o;
+  },
+  // aan welke rand van het pad staat een padobject? 0 midden, 1 v0 (boven-rechts), 2 v1 (onder-links), 3 u0 (boven-links), 4 u1 (onder-rechts)
+  edgeVariant(o) {
+    const x = o.x, y = o.y; if (!this.hasPath(x, y)) return 0;
+    const n = this.hasPath(x, y - 1), s = this.hasPath(x, y + 1), e = this.hasPath(x + 1, y), w = this.hasPath(x - 1, y);
+    const free = []; if (!s) free.push(2); if (!e) free.push(4); if (!n) free.push(1); if (!w) free.push(3);
+    return free.length ? free[0] : 2;
+  },
+  // ---- grond kopen ------------------------------------------------------------
+  landStrip(dir) {
+    const o = this.owned, S = DATA.LAND_STRIP;
+    if (dir === 'n') return o.y0 - S >= 0 ? { x0: o.x0, y0: o.y0 - S, x1: o.x1, y1: o.y0 } : null;
+    if (dir === 'w') return o.x0 - S >= 0 ? { x0: o.x0 - S, y0: o.y0, x1: o.x0, y1: o.y1 } : null;
+    if (dir === 'e') return o.x1 + S <= this.W ? { x0: o.x1, y0: o.y0, x1: o.x1 + S, y1: o.y1 } : null;
+    return null;
+  },
+  landCost(dir) { const r = this.landStrip(dir); return r ? (r.x1 - r.x0) * (r.y1 - r.y0) * DATA.LAND_PRICE : 0; },
+  buyLand(dir) {
+    const r = this.landStrip(dir); if (!r) return false;
+    const o = this.owned; this.owned = { x0: Math.min(o.x0, r.x0), y0: Math.min(o.y0, r.y0), x1: Math.max(o.x1, r.x1), y1: Math.max(o.y1, r.y1) };
+    this.pathVersion++; return true;
   },
   remove(o) {
     for (let dy = 0; dy < o.h; dy++) for (let dx = 0; dx < o.w; dx++) { const i = this.idx(o.x + dx, o.y + dy); if (this.obj[i] === o.id) this.obj[i] = 0; }
@@ -127,7 +171,7 @@ const World = {
     const res = [];
     const add = (x, y) => { if (this.inb(x, y) && this.path[this.idx(x, y)] && this.reach[this.idx(x, y)]) res.push([x, y]); };
     const def = DATA.items[o.type];
-    if (def.onPath && this.path[this.idx(o.x, o.y)]) add(o.x, o.y);
+    if ((def.onPath || def.kind === 'pathobj') && this.path[this.idx(o.x, o.y)]) add(o.x, o.y);
     for (let dx = 0; dx < o.w; dx++) { add(o.x + dx, o.y - 1); add(o.x + dx, o.y + o.h); }
     for (let dy = 0; dy < o.h; dy++) { add(o.x - 1, o.y + dy); add(o.x + o.w, o.y + dy); }
     o._doors = res; o._doorsV = this.pathVersion;
@@ -172,8 +216,8 @@ const World = {
   },
   // afstandsveld vanaf (sx,sy); -1 = onbereikbaar
   distField(sx, sy) {
-    const W = this.W, H = this.H, n = W * H, start = this.idx(sx, sy);
-    const dist = new Int32Array(n).fill(-1);
+    const W = this.W, H = this.H, start = this.idx(sx, sy);
+    const dist = this._distBuf; dist.fill(-1); // hergebruikte buffer: direct gebruiken, niet bewaren
     if (!this.inb(sx, sy) || !this.path[start]) return dist;
     const q = this._queue; let qh = 0, qt = 0; dist[start] = 0; q[qt++] = start;
     while (qh < qt) {
@@ -225,9 +269,14 @@ const World = {
     const noise = this.countNear(cx, cy, 3, p => p !== o && DATA.items[p.type].kind === 'facility' && (DATA.items[p.type].service === 'fun' || p.type === 'restaurant' || p.type === 'snackbar' || p.type === 'sanitairgebouw'));
     return Util.clamp(nature * 0.12 - noise * 0.08, -0.3, 0.6);
   },
-  binNear(x, y, r) {
-    for (const o of this.objects.values()) if (o.type === 'prullenbak' && Math.abs(o.x - x) <= r && Math.abs(o.y - y) <= r) return true;
+  binNear(x, y) {
+    for (const o of this.objects.values()) { const r = DATA.items[o.type].binRadius; if (r && Math.abs(o.x + o.w / 2 - 0.5 - x) <= r && Math.abs(o.y + o.h / 2 - 0.5 - y) <= r) return true; }
     return false;
+  },
+  nearestBin(x, y, maxDist) {
+    let best = null, bd = maxDist;
+    for (const o of this.objects.values()) { if (!DATA.items[o.type].binRadius) continue; const d = Math.abs(o.x - x) + Math.abs(o.y - y); if (d < bd && this.isReachable(o)) { bd = d; best = o; } }
+    return best;
   },
   lampNear(x, y, r) {
     for (const o of this.objects.values()) if (o.type === 'lantaarn' && Math.abs(o.x - x) <= r && Math.abs(o.y - y) <= r) return true;

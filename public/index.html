@@ -57,17 +57,25 @@
   </div>
 </div>
 
+<div id="confirm" class="hidden"><div class="confirm-box"><p id="confirm-msg"></p><div class="confirm-btns"><button id="confirm-yes" class="primary">Ja</button><button id="confirm-no">Annuleren</button></div></div></div>
+
 <div id="startscreen">
   <div class="start-box">
     <h1>⛺ Camping Tycoon</h1>
     <p class="sub">Bouw de gezelligste camping van Nederland. Leg paden aan, zet staplekken en trekkershutten neer, bouw sanitair, een zwembad en een speeltuin, huur personeel in en houd je gasten tevreden.</p>
+    <div id="start-slots"></div>
+    <h3 class="start-h">Nieuwe camping</h3>
     <label>Naam van je camping<input id="start-name" type="text" maxlength="30"></label>
-    <label>Grootte van het terrein
-      <select id="start-size"><option value="32">Klein (32 × 32)</option><option value="40" selected>Normaal (40 × 40)</option><option value="52">Groot (52 × 52)</option></select>
-    </label>
+    <div class="start-cols">
+      <label>Grootte van het terrein
+        <select id="start-size"><option value="32">Klein (32 × 32)</option><option value="40" selected>Normaal (40 × 40)</option><option value="52">Groot (52 × 52)</option></select>
+      </label>
+      <label>Opslagslot<select id="start-slot"></select></label>
+    </div>
+    <p class="muted small-note">Je kunt later altijd grond bijkopen om je terrein uit te breiden.</p>
     <div class="start-buttons">
       <button id="start-btn" class="primary">Nieuwe camping starten</button>
-      <button id="start-load" class="hidden">Opgeslagen spel laden</button>
+      <button id="start-back" class="hidden">Terug naar het spel</button>
     </div>
     <p class="hint-text">Slepen = schuiven · scrollen = zoomen · klik op gasten voor hun gedachten</p>
   </div>

@@ -52,6 +52,7 @@ const Econ = {
     variety += Math.min(funTypes, 6) * 0.05;
     if (has('bankje') || has('picknicktafel')) variety += 0.04; if (has('lantaarn')) variety += 0.04; if (has('prullenbak')) variety += 0.04;
     if (has('slagboom')) variety += 0.03; if (has('informatiebord')) variety += 0.02; if (has('parkeerplaats')) variety += 0.02; if (has('wasserette')) variety += 0.02;
+    if (has('afvalstation')) variety += 0.03; if (has('camperservice')) variety += 0.03; if (has('pizzeria') || has('bakker') || has('ijssalon')) variety += 0.04;
     variety = Math.min(1, variety);
     const natureScore = Util.clamp((nature + Animals.list.size * 0.8) / Math.max(5, spots * 1.6), 0, 1);
     const penalty = (dirtN ? dirtSum / dirtN / 100 * 8 : 0) + broken * 3 + unreachable * 2;
@@ -84,6 +85,12 @@ const Econ = {
     if (wages) this.expense('personeel', wages);
     let feed = 0; for (const a of Animals.list.values()) feed += DATA.animals[a.kind].upkeep;
     if (feed) this.expense('dieren', feed);
+    // camperservicepunt: caravan- en campergasten verwachten er een
+    const svc = World.listByType('camperservice').some(o => World.isReachable(o));
+    for (const p of Guests.parties.values()) {
+      if (p.leaving || (p.vehicle !== 'caravan' && p.vehicle !== 'camper')) continue;
+      for (const id of p.members) { const g = Guests.guests.get(id); if (!g) continue; if (svc) { g.happy = Math.min(100, g.happy + 2); if (Util.chance(0.3)) Guests.think(g, 'service'); } else { g.happy -= 1.5; Guests.think(g, 'noservice'); } }
+    }
     // natuurlijke slijtage en vervuiling
     const hasMonteur = [...Staff.list.values()].some(s => s.role === 'monteur');
     for (const o of World.objects.values()) {
@@ -114,14 +121,14 @@ const Econ = {
   statsSnapshot() {
     const st = Game.stats;
     let nature = 0, staff = Staff.list.size; const has = {};
-    for (const o of World.objects.values()) { const d = DATA.items[o.type]; if (d.nature && d.kind === 'deco') nature++; has[o.type] = true; }
-    return { totalParties: st.totalParties, totalGuests: st.totalGuests, ratingStars: this.stars(), guestsNow: Guests.guests.size, money: Game.money, has, animals: Animals.list.size, nature, staff, day: Game.day };
+    for (const o of World.objects.values()) { const d = DATA.items[o.type]; if (d.nature && d.kind === 'deco' && !o.natural) nature++; has[o.type] = true; }
+    return { totalParties: st.totalParties, totalGuests: st.totalGuests, ratingStars: this.stars(), guestsNow: Guests.guests.size, money: Game.money, has, animals: Animals.list.size, nature, staff, day: Game.day, landBought: st.landBought || 0 };
   },
   checkMilestones() {
     const s = this.statsSnapshot();
     for (const m of DATA.milestones) {
       if (Game.milestones[m.id]) continue;
-      if (m.check(s)) { Game.milestones[m.id] = Game.day; UI.notify('Doel behaald: ' + m.text + '!', 'good'); }
+      if (m.check(s)) { Game.milestones[m.id] = Game.day + 1; UI.notify('Doel behaald: ' + m.text + '!', 'good'); } // dag + 1: dag 0 zou anders als 'niet behaald' tellen
     }
   },
 };

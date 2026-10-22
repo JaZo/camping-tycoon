@@ -15,12 +15,14 @@ Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). 
 - **Paden** (grind en tegels) waar gasten en personeel overheen lopen. Alles moet via een pad met de ingang verbonden zijn.
 - **Staplekken**: tentplek, caravanplek en comfortplek. Bezette plekken tonen een tent, caravan of camper.
 - **Verhuur**: trekkershut, glampingtent, stacaravan, chalet en pipowagen.
-- **Voorzieningen**: receptie (verplicht om in te checken), slagboom, sanitairgebouw, toiletunit, restaurant met terras, snackbar, campingwinkel, wasserette, prullenbakken, bankjes, lantaarnpalen, picknicktafels, informatiebord, fietsverhuur en parkeerplaats.
-- **Recreatie**: speeltuin, zwembad, trampoline, midgetgolf, volleybalveld, jeu-de-boulesbaan, kampvuurplaats, recreatiezaal, dierenweide, skelterverhuur en tafeltennistafel.
+- **Voorzieningen**: receptie (verplicht om in te checken), slagboom, sanitairgebouw, toiletunit, restaurant met terras, snackbar, pizzeria, bakker, ijssalon, campingwinkel, wasserette, afvalstation, camperservicepunt, prullenbakken, bankjes, lantaarnpalen, picknicktafels, informatiebord, fietsverhuur en parkeerplaats. Prullenbakken, lantaarns, bankjes en borden staan aan de rand van het pad.
+- **Recreatie**: speeltuin, zwembad, trampoline, midgetgolf, volleybalveld, jeu-de-boulesbaan, kampvuurplaats, recreatiezaal, dierenweide, skelterverhuur en tafeltennistafel. Overdekt: binnenzwembad, binnenspeeltuin, bowlingbaan, fitnessruimte en bioscoop (populair bij regen en in de winter).
 - **Natuur**: eiken, dennen, berken, treurwilgen, appelbomen, struiken, heggen, bloemperken, wilde bloemen en rotsblokken. Sfeer rond een staplek maakt gasten blijer.
 - **Dieren**: geiten, schapen, kippen, koeien, pony's, konijnen en eenden lopen (of zwemmen) vrij rond.
-- **Personeel**: schoonmakers (zwerfafval en sanitair), onderhoudsmonteurs (reparaties en preventief onderhoud) en animatiemedewerkers (vermaak, 's avonds bij het kampvuur).
-- **Terrein**: gras, zand en water om zelf een vijver of strandje te maken.
+- **Personeel**: schoonmakers (zwerfafval en sanitair, met instelbare focus), onderhoudsmonteurs (reparaties en preventief onderhoud) en animatiemedewerkers (vermaak, 's avonds bij het kampvuur).
+- **Terrein**: gras, zand en water om zelf een vijver of strandje te maken, en stroken grond bijkopen om het terrein uit te breiden.
+- **Bouwen**: objecten draaien (R) en verplaatsen via het infopaneel; op touchschermen tik je eerst om te mikken en bevestig je met *Plaatsen*.
+- **Meerdere campings**: vier opslagslots, één camping tegelijk actief.
 
 ## Simulatie
 
@@ -39,6 +41,8 @@ Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). 
 | Schuiven | slepen met de muis, rechtermuisknop, pijltjes of WASD |
 | Zoomen | scrollwiel, `+` / `-`, pinch op touchscreens |
 | Bouwen | kies een categorie onderin, klik een item en klik op het terrein (slepen voor paden en terrein) |
+| Draaien | `R` (ook voor een geselecteerd gebouw) of de knop *Draaien* |
+| Verplaatsen | selecteer een gebouw en kies *Verplaatsen* in het infopaneel |
 | Stoppen met bouwen | `Esc` of rechtermuisknop |
 | Informatie | klik op een gebouw, gast, personeelslid of dier |
 | Pauze / snelheid | spatie, `1`, `2`, `3` |

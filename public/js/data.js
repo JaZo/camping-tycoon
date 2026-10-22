@@ -11,11 +11,18 @@ DATA.DAYS_PER_MONTH = 12;
 DATA.START_MONTH = 4;       // mei (0 = januari)
 DATA.START_MONEY = 120000;
 DATA.EXTRA_PERSON = 7;      // toeslag per nacht per persoon boven de 2
+DATA.MAP_MAX = 72;          // totale kaartgrootte; het gekochte deel groeit door grond bij te kopen
+DATA.LAND_STRIP = 8;        // breedte van een strook grond
+DATA.LAND_PRICE = 55;       // prijs per tegel
+DATA.SAVE_SLOTS = 4;
 
 DATA.months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 DATA.monthsShort = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 // aantrekkingskracht per maand (0 = januari)
 DATA.seasonFactor = [0.06, 0.06, 0.12, 0.35, 0.6, 0.85, 1.0, 1.0, 0.6, 0.3, 0.1, 0.06];
+// accommodaties (hutten, chalets...) hebben een vlakkere curve: ook in de winter en rond kerst vraag
+DATA.accSeasonFactor = [0.4, 0.35, 0.4, 0.55, 0.7, 0.9, 1.0, 1.0, 0.75, 0.6, 0.4, 0.55];
+DATA.pitchWants = ['tent', 'caravan', 'camper'];
 // weerkansen per maand [zon, bewolkt, regen]
 DATA.weatherTable = [
   [0.15, 0.4, 0.45], [0.2, 0.4, 0.4], [0.3, 0.4, 0.3], [0.4, 0.35, 0.25], [0.5, 0.3, 0.2], [0.6, 0.25, 0.15],
@@ -74,10 +81,10 @@ addItem({ id: 'receptie', cat: 'voorzieningen', name: 'Receptie', kind: 'facilit
 addItem({ id: 'slagboom', cat: 'voorzieningen', name: 'Slagboom', kind: 'pathobj', w: 1, h: 1, cost: 1200, upkeep: 1, sh: 40,
   effect: 'security', desc: 'Houdt ongewenst bezoek buiten. Gasten voelen zich veiliger. Plaats op een pad.' });
 addItem({ id: 'sanitairgebouw', cat: 'voorzieningen', name: 'Sanitairgebouw', kind: 'facility', w: 3, h: 2, cost: 12000, upkeep: 10, sh: 64,
-  service: 'hygiene', amount: 100, duration: 6, capacity: 8, indoor: true, quality: 2, dirtRate: 3, breakable: true, wear: 1.5,
+  service: 'hygiene', amount: 100, duration: 6, capacity: 8, indoor: true, quality: 2, dirtRate: 1.5, breakable: true, wear: 1.5,
   desc: 'Douches en toiletten. Wordt vies bij gebruik; laat een schoonmaker langskomen.' });
 addItem({ id: 'toiletunit', cat: 'voorzieningen', name: 'Toiletunit', kind: 'facility', w: 1, h: 1, cost: 2500, upkeep: 2, sh: 48,
-  service: 'hygiene', amount: 55, duration: 3, capacity: 1, indoor: true, quality: 1, dirtRate: 9, breakable: true, wear: 2,
+  service: 'hygiene', amount: 55, duration: 3, capacity: 1, indoor: true, quality: 1, dirtRate: 6, breakable: true, wear: 2,
   desc: 'Eenvoudige toiletcabine. Snel vies en niet erg geliefd, maar beter dan niets.' });
 addItem({ id: 'restaurant', cat: 'voorzieningen', name: 'Restaurant', kind: 'facility', w: 3, h: 3, cost: 24000, upkeep: 20, sh: 80,
   service: 'food', amount: 100, duration: 10, capacity: 16, indoor: true, quality: 3, feeKey: 'restaurant', breakable: true, wear: 0.5,
@@ -91,12 +98,24 @@ addItem({ id: 'winkeltje', cat: 'voorzieningen', name: 'Campingwinkel', kind: 'f
   service: 'food', amount: 80, duration: 5, capacity: 8, indoor: true, quality: 2, feeKey: 'winkel', breakable: false,
   aud: { kid: 0.6, gezin: 1.2, stel: 1, jongeren: 1, senioren: 1.1 },
   desc: 'Verse broodjes en boodschappen. Gasten koken daarna lekker bij hun tent.' });
+addItem({ id: 'pizzeria', cat: 'voorzieningen', name: 'Pizzeria', kind: 'facility', w: 3, h: 2, cost: 16000, upkeep: 12, sh: 64,
+  service: 'food', amount: 90, duration: 8, capacity: 10, indoor: true, quality: 2.5, feeKey: 'pizzeria', breakable: true, wear: 0.5,
+  aud: { kid: 1.3, gezin: 1.3, stel: 1, jongeren: 1.4, senioren: 0.7 },
+  desc: 'Houtoven-pizza\'s. Favoriet bij gezinnen en jongeren.' });
+addItem({ id: 'bakker', cat: 'voorzieningen', name: 'Bakker', kind: 'facility', w: 2, h: 1, cost: 7000, upkeep: 5, sh: 56,
+  service: 'food', amount: 55, duration: 3, capacity: 6, style: 'door', quality: 2, feeKey: 'bakker', breakable: true, wear: 0.5, morning: true,
+  aud: { kid: 0.8, gezin: 1.2, stel: 1.1, jongeren: 0.6, senioren: 1.4 },
+  desc: 'Verse broodjes en croissants. Vooral \'s ochtends druk.' });
+addItem({ id: 'ijssalon', cat: 'voorzieningen', name: 'IJssalon', kind: 'facility', w: 1, h: 1, cost: 4500, upkeep: 3, sh: 52,
+  service: 'food', amount: 30, duration: 3, capacity: 4, style: 'door', quality: 2, feeKey: 'ijs', breakable: true, wear: 0.8, sunBonus: true,
+  aud: { kid: 1.8, gezin: 1.2, stel: 1.1, jongeren: 1.2, senioren: 0.9 },
+  desc: 'Schepijs in twintig smaken. Bij zonnig weer staat er een rij.' });
 addItem({ id: 'wasserette', cat: 'voorzieningen', name: 'Wasserette', kind: 'facility', w: 1, h: 1, cost: 4000, upkeep: 3, sh: 48,
   service: 'hygiene', amount: 25, duration: 5, capacity: 2, indoor: true, quality: 1, feeKey: 'wasserette', breakable: true, wear: 1,
   aud: { kid: 0, gezin: 1, stel: 0.6, jongeren: 0.3, senioren: 1.2 },
   desc: 'Wasmachines voor gasten die langer blijven.' });
 addItem({ id: 'prullenbak', cat: 'voorzieningen', name: 'Prullenbak', kind: 'pathobj', w: 1, h: 1, cost: 80, upkeep: 0, sh: 24,
-  effect: 'bin', desc: 'Gasten gooien hun afval erin in plaats van op de grond. Plaats op een pad.' });
+  effect: 'bin', binRadius: 3, desc: 'Gasten gooien hun afval erin in plaats van op de grond. Plaats op een pad.' });
 addItem({ id: 'bankje', cat: 'voorzieningen', name: 'Bankje', kind: 'facility', w: 1, h: 1, cost: 150, upkeep: 0, sh: 24, onPath: true,
   service: 'rest', amount: 45, duration: 5, capacity: 2, style: 'sit', quality: 1,
   aud: { kid: 0.5, gezin: 1, stel: 1.2, jongeren: 0.6, senioren: 1.6 },
@@ -112,6 +131,10 @@ addItem({ id: 'fietsverhuur', cat: 'voorzieningen', name: 'Fietsverhuur', kind: 
   service: 'fun', amount: 65, duration: 9, capacity: 4, indoor: true, hideText: 'op fietstocht', quality: 2, feeKey: 'fiets', breakable: true, wear: 1,
   aud: { kid: 0.4, gezin: 1, stel: 1.3, jongeren: 0.8, senioren: 1.4 },
   desc: 'Verhuur van fietsen voor een tochtje door de omgeving.' });
+addItem({ id: 'afvalstation', cat: 'voorzieningen', name: 'Afvalstation', kind: 'facility', w: 2, h: 1, cost: 2500, upkeep: 2, sh: 36,
+  effect: 'bin', binRadius: 7, desc: 'Containers voor glas, papier en restafval. Gasten in een ruime omgeving brengen hun afval hierheen.' });
+addItem({ id: 'camperservice', cat: 'voorzieningen', name: 'Camperservicepunt', kind: 'facility', w: 1, h: 1, cost: 3500, upkeep: 2, sh: 40,
+  effect: 'camperservice', desc: 'Lozen van grijswater en vers water tanken. Caravan- en campergasten verwachten dit.' });
 addItem({ id: 'parkeerplaats', cat: 'voorzieningen', name: 'Parkeerplaats', kind: 'facility', w: 2, h: 2, cost: 3000, upkeep: 2, sh: 24,
   effect: 'parking', desc: 'Parkeerplaats voor gasten van hutten en chalets. Verhoogt de beoordeling.' });
 
@@ -162,6 +185,27 @@ addItem({ id: 'tafeltennis', cat: 'recreatie', name: 'Tafeltennistafel', kind: '
   aud: { kid: 1, gezin: 1, stel: 0.6, jongeren: 1.4, senioren: 0.5 },
   desc: 'Betonnen pingpongtafel. Onverwoestbaar.' });
 
+addItem({ id: 'binnenzwembad', cat: 'recreatie', name: 'Binnenzwembad', kind: 'facility', w: 3, h: 3, cost: 45000, upkeep: 32, sh: 72,
+  service: 'fun', amount: 95, duration: 10, capacity: 16, indoor: true, hideText: 'in het binnenbad', quality: 3, feeKey: 'zwembad', rainBonus: true, breakable: true, wear: 0.6,
+  aud: { kid: 1.5, gezin: 1.2, stel: 1, jongeren: 1.3, senioren: 0.9 },
+  desc: 'Overdekt zwemparadijs. Het hele jaar open, ook bij regen.' });
+addItem({ id: 'binnenspeeltuin', cat: 'recreatie', name: 'Binnenspeeltuin', kind: 'facility', w: 2, h: 2, cost: 12000, upkeep: 8, sh: 64,
+  service: 'fun', amount: 75, duration: 8, capacity: 12, indoor: true, hideText: 'in de binnenspeeltuin', quality: 2.2, feeKey: 'binnenspeeltuin', rainBonus: true, breakable: true, wear: 0.8,
+  aud: { kid: 1.8, gezin: 0.6, stel: 0, jongeren: 0.1, senioren: 0 },
+  desc: 'Ballenbak, klimtoren en glijbanen onder dak. Redding bij slecht weer.' });
+addItem({ id: 'bowlingbaan', cat: 'recreatie', name: 'Bowlingbaan', kind: 'facility', w: 3, h: 2, cost: 20000, upkeep: 14, sh: 64,
+  service: 'fun', amount: 80, duration: 9, capacity: 12, indoor: true, hideText: 'aan het bowlen', quality: 2.5, feeKey: 'bowling', rainBonus: true, breakable: true, wear: 0.5,
+  aud: { kid: 0.9, gezin: 1.2, stel: 1.1, jongeren: 1.5, senioren: 0.8 },
+  desc: 'Vier banen met discoverlichting. Jongeren en gezinnen zijn er dol op.' });
+addItem({ id: 'fitness', cat: 'recreatie', name: 'Fitnessruimte', kind: 'facility', w: 2, h: 2, cost: 10000, upkeep: 7, sh: 64,
+  service: 'fun', amount: 60, duration: 8, capacity: 8, indoor: true, hideText: 'in de sportschool', quality: 1.8, feeKey: 'fitness', rainBonus: true, breakable: true, wear: 0.7,
+  aud: { kid: 0, gezin: 0.6, stel: 1.3, jongeren: 1.2, senioren: 0.7 },
+  desc: 'Loopbanden en gewichten voor wie ook op vakantie wil sporten.' });
+addItem({ id: 'bioscoop', cat: 'recreatie', name: 'Bioscoop', kind: 'facility', w: 2, h: 2, cost: 18000, upkeep: 12, sh: 72,
+  service: 'fun', amount: 80, duration: 10, capacity: 20, indoor: true, hideText: 'in de bioscoop', quality: 2.4, feeKey: 'bioscoop', rainBonus: true, eveningBonus: true, breakable: true, wear: 0.4,
+  aud: { kid: 1.2, gezin: 1.1, stel: 1.2, jongeren: 1.1, senioren: 1 },
+  desc: 'Kleine filmzaal. Vooral \'s avonds en bij regen populair.' });
+
 // ---- NATUUR --------------------------------------------------------------
 addItem({ id: 'eik', cat: 'natuur', name: 'Eik', kind: 'deco', w: 1, h: 1, cost: 90, sh: 72, nature: 1, seasonal: true, desc: 'Grote loofboom. Geeft schaduw en sfeer.' });
 addItem({ id: 'den', cat: 'natuur', name: 'Dennenboom', kind: 'deco', w: 1, h: 1, cost: 80, sh: 72, nature: 1, desc: 'Altijd groen. Ruikt naar vakantie.' });
@@ -188,16 +232,21 @@ for (const a of Object.values(DATA.animals)) DATA.items[a.id] = Object.assign({ 
 
 // ---- PERSONEEL -----------------------------------------------------------
 DATA.staff = {
-  schoonmaker: { id: 'schoonmaker', name: 'Schoonmaker', wage: 60, color: '#3f7fd6', desc: 'Raapt zwerfafval op en maakt het sanitair schoon.' },
+  schoonmaker: { id: 'schoonmaker', name: 'Schoonmaker', wage: 60, color: '#3f7fd6', desc: 'Raapt zwerfafval op en maakt het sanitair schoon. Je kunt een focus instellen.' },
   monteur: { id: 'monteur', name: 'Onderhoudsmonteur', wage: 80, color: '#f08c1e', desc: 'Repareert kapotte voorzieningen en doet preventief onderhoud.' },
   animator: { id: 'animator', name: 'Animatiemedewerker', wage: 70, color: '#e8d21d', desc: 'Zorgt voor vermaak: spelletjes, dansjes en \'s avonds het kampvuur.' },
 };
 for (const s of Object.values(DATA.staff)) DATA.items[s.id] = Object.assign({ cat: 'personeel', kind: 'staff', cost: 0, w: 1, h: 1 }, s);
 
+DATA.staffFocus = { alles: 'Alles', afval: 'Alleen zwerfafval', sanitair: 'Alleen sanitair' };
+
 // ---- TERREIN -------------------------------------------------------------
 addItem({ id: 'gras', cat: 'terrein', name: 'Gras', kind: 'terrain', terrain: 0, cost: 10, w: 1, h: 1, desc: 'Maak van zand of water weer gras.' });
 addItem({ id: 'zand', cat: 'terrein', name: 'Zand', kind: 'terrain', terrain: 1, cost: 20, w: 1, h: 1, desc: 'Strandje bij de vijver of een zandbak.' });
 addItem({ id: 'water', cat: 'terrein', name: 'Water', kind: 'terrain', terrain: 2, cost: 40, w: 1, h: 1, desc: 'Graaf een vijver. Gasten vinden water bij hun plek heerlijk.' });
+addItem({ id: 'land_n', cat: 'terrein', name: 'Grond kopen: noord', kind: 'land', dir: 'n', cost: 0, w: 1, h: 1, desc: 'Koop een strook van 8 tegels aan de noordkant (bovenaan) van je terrein.' });
+addItem({ id: 'land_w', cat: 'terrein', name: 'Grond kopen: west', kind: 'land', dir: 'w', cost: 0, w: 1, h: 1, desc: 'Koop een strook van 8 tegels aan de westkant (links) van je terrein.' });
+addItem({ id: 'land_e', cat: 'terrein', name: 'Grond kopen: oost', kind: 'land', dir: 'e', cost: 0, w: 1, h: 1, desc: 'Koop een strook van 8 tegels aan de oostkant (rechts) van je terrein.' });
 addItem({ id: 'sloop', cat: 'slopen', name: 'Slopen', kind: 'demolish', cost: 0, w: 1, h: 1, desc: 'Verwijder objecten, paden of dieren. Je krijgt de helft van de bouwkosten terug.' });
 
 DATA.itemsByCat = {};
@@ -207,9 +256,10 @@ for (const c of DATA.categories) DATA.itemsByCat[c.id] = Object.values(DATA.item
 DATA.defaultPrices = {
   tentplek: 30, caravanplek: 40, comfortplek: 52, trekkershut: 80, glampingtent: 120, stacaravan: 105, chalet: 200, pipowagen: 95,
 };
-DATA.defaultFees = { restaurant: 18, snackbar: 7, winkel: 9, wasserette: 4, fiets: 8, zwembad: 3, midgetgolf: 4, skelter: 5 };
-DATA.feeNames = { restaurant: 'Restaurant (per maaltijd)', snackbar: 'Snackbar (per snack)', winkel: 'Winkel (per boodschap)',
-  wasserette: 'Wasserette (per wasje)', fiets: 'Fietsverhuur (per rit)', zwembad: 'Zwembad (entree)', midgetgolf: 'Midgetgolf (per rondje)', skelter: 'Skelter (per rit)' };
+DATA.defaultFees = { restaurant: 18, snackbar: 7, pizzeria: 14, bakker: 5, ijs: 4, winkel: 9, wasserette: 4, fiets: 8, zwembad: 3, midgetgolf: 4, skelter: 5, binnenspeeltuin: 3, bowling: 6, fitness: 5, bioscoop: 7 };
+DATA.feeNames = { restaurant: 'Restaurant (per maaltijd)', snackbar: 'Snackbar (per snack)', pizzeria: 'Pizzeria (per pizza)', bakker: 'Bakker (per broodje)', ijs: 'IJssalon (per ijsje)', winkel: 'Winkel (per boodschap)',
+  wasserette: 'Wasserette (per wasje)', fiets: 'Fietsverhuur (per rit)', zwembad: 'Zwembad / binnenbad (entree)', midgetgolf: 'Midgetgolf (per rondje)', skelter: 'Skelter (per rit)',
+  binnenspeeltuin: 'Binnenspeeltuin (entree)', bowling: 'Bowlingbaan (per spel)', fitness: 'Fitness (per bezoek)', bioscoop: 'Bioscoop (per film)' };
 // wat gasten redelijk vinden per nacht (basis), per gewenst type
 DATA.baseWillingness = { tent: 38, caravan: 50, camper: 54, hut: 100, glamping: 150, stacaravan: 130, chalet: 250, pipowagen: 120 };
 DATA.wantNames = { tent: 'tentplek', caravan: 'caravanplek', camper: 'camperplek', hut: 'trekkershut', glamping: 'glampingtent',
@@ -218,13 +268,13 @@ DATA.wantNames = { tent: 'tentplek', caravan: 'caravanplek', camper: 'camperplek
 // ---- GEZELSCHAPPEN -------------------------------------------------------
 DATA.partyTypes = {
   gezin: { name: 'Gezin', weight: 40, needMul: { hunger: 1.15, hygiene: 1, fun: 1.15, energy: 1 }, budget: 1,
-    wants: { tent: 30, caravan: 30, camper: 8, hut: 10, glamping: 6, stacaravan: 8, chalet: 4, pipowagen: 6 }, nights: [3, 7] },
+    wants: { tent: 30, caravan: 30, camper: 8, hut: 12, glamping: 7, stacaravan: 10, chalet: 10, pipowagen: 6 }, nights: [3, 7] },
   stel: { name: 'Stel', weight: 25, needMul: { hunger: 1, hygiene: 1.1, fun: 0.9, energy: 0.9 }, budget: 1.2,
-    wants: { tent: 25, caravan: 15, camper: 15, hut: 10, glamping: 20, stacaravan: 5, chalet: 6, pipowagen: 8 }, nights: [2, 5] },
+    wants: { tent: 25, caravan: 15, camper: 15, hut: 12, glamping: 20, stacaravan: 6, chalet: 10, pipowagen: 8 }, nights: [2, 5] },
   jongeren: { name: 'Vriendengroep', weight: 15, needMul: { hunger: 1.2, hygiene: 0.7, fun: 1.5, energy: 0.8 }, budget: 0.75,
-    wants: { tent: 70, caravan: 5, camper: 10, hut: 10, glamping: 2, stacaravan: 3, chalet: 0, pipowagen: 2 }, nights: [2, 4] },
+    wants: { tent: 70, caravan: 5, camper: 10, hut: 10, glamping: 2, stacaravan: 3, chalet: 2, pipowagen: 2 }, nights: [2, 4] },
   senioren: { name: 'Senioren', weight: 20, needMul: { hunger: 1, hygiene: 1.2, fun: 0.7, energy: 1.4 }, budget: 1.3,
-    wants: { tent: 5, caravan: 35, camper: 20, hut: 8, glamping: 4, stacaravan: 20, chalet: 6, pipowagen: 2 }, nights: [4, 9] },
+    wants: { tent: 5, caravan: 35, camper: 20, hut: 8, glamping: 4, stacaravan: 22, chalet: 12, pipowagen: 2 }, nights: [4, 9] },
 };
 
 // ---- GEDACHTEN -----------------------------------------------------------
@@ -258,11 +308,14 @@ DATA.thoughts = {
   leavebad: ['Nooit meer hierheen.', 'Wat een teleurstelling.'],
   campfire: ['Gezellig bij het vuur.', 'Marshmallows!'],
   wait: ['Wachten, wachten...'],
+  bin: ['Afval netjes weggegooid.', 'Even naar de prullenbak.'],
+  service: ['Fijn, grijswater geloosd en water getankt.'],
+  noservice: ['Waar kan ik mijn grijswater kwijt?', 'Geen servicepunt voor de camper...'],
 };
 
 DATA.complaintNames = { nofood: 'nergens eten te krijgen', nohygiene: 'geen sanitair', nofun: 'niets te doen', full: 'te druk bij voorzieningen',
   broken: 'kapotte voorzieningen', litter: 'zwerfafval', dirtyfac: 'vies sanitair', dark: 'donkere paden', rain: 'regen', pricey: 'te duur',
-  wait: 'lang wachten', hungry: 'honger', dirty: 'wilde douchen', bored: 'verveling', tired: 'vermoeidheid' };
+  wait: 'lang wachten', hungry: 'honger', dirty: 'wilde douchen', bored: 'verveling', tired: 'vermoeidheid', noservice: 'geen camperservicepunt' };
 
 // ---- DOELEN --------------------------------------------------------------
 DATA.milestones = [
@@ -274,13 +327,15 @@ DATA.milestones = [
   { id: 'g100', text: '100 gasten tegelijk op de camping', check: s => s.guestsNow >= 100 },
   { id: 't500', text: 'In totaal 500 gasten ontvangen', check: s => s.totalGuests >= 500 },
   { id: 't2000', text: 'In totaal 2000 gasten ontvangen', check: s => s.totalGuests >= 2000 },
-  { id: 'k100', text: '€ 100.000 in kas', check: s => s.money >= 100000 },
-  { id: 'k500', text: '€ 500.000 in kas', check: s => s.money >= 500000 },
+  { id: 'k250', text: '€ 250.000 in kas', check: s => s.money >= 250000 },
+  { id: 'k1000', text: '€ 1.000.000 in kas', check: s => s.money >= 1000000 },
   { id: 'zwembad', text: 'Bouw een zwembad', check: s => s.has.zwembad },
   { id: 'dieren', text: 'Houd 8 dieren op de camping', check: s => s.animals >= 8 },
-  { id: 'natuur', text: 'Plant 50 bomen of struiken', check: s => s.nature >= 50 },
+  { id: 'natuur', text: 'Plant zelf 50 bomen of struiken', check: s => s.nature >= 50 },
   { id: 'staff', text: 'Heb 6 personeelsleden in dienst', check: s => s.staff >= 6 },
   { id: 'jaar', text: 'Draai een vol jaar', check: s => s.day >= 12 * DATA.DAYS_PER_MONTH },
+  { id: 'grond', text: 'Koop een strook grond bij', check: s => s.landBought >= 1 },
+  { id: 'binnen', text: 'Bouw een overdekte attractie', check: s => s.has.binnenzwembad || s.has.binnenspeeltuin || s.has.bowlingbaan || s.has.bioscoop || s.has.fitness },
 ];
 
 DATA.tips = [
@@ -294,4 +349,7 @@ DATA.tips = [
   'In de winter komen alleen gasten voor trekkershutten en chalets. Gebruik die tijd om te bouwen.',
   'Pas de prijzen aan in het prijzenpaneel. Een hoge beoordeling laat je meer vragen.',
   'Een animatiemedewerker maakt gasten in de buurt vrolijk. \'s Avonds gaat hij naar het kampvuur.',
+  'Te weinig ruimte? Koop in de categorie Terrein een strook grond bij.',
+  'Druk op R (of de knop Draaien) om een gebouw te draaien voordat je het plaatst. Via het infopaneel kun je gebouwen ook verplaatsen.',
+  'Geef schoonmakers een focus (afval of sanitair) via het infopaneel of het personeelsoverzicht.',
 ];

@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 const UI = {
   tool: null, category: null, selected: null, hudTimer: 0, infoTimer: 0, moneyWarn: 0,
+  toolMirror: false, moving: null, touchMode: false, landHover: null, lastTouch: 0,
   pan: null, painting: false, lastPaint: null, clickCand: null, pinch: null, previews: new Map(),
 
   $(id) { return document.getElementById(id); },
@@ -29,6 +30,18 @@ const UI = {
     this.bindInput();
   },
 
+  // ---- bevestigingsdialoog (geen browser-confirm: die pauzeert het spel en verbergt de preview) ----
+  confirmDialog(msg, onYes, yesLabel, onNo) {
+    const box = this.$('confirm'), yes = this.$('confirm-yes'), no = this.$('confirm-no');
+    this.$('confirm-msg').textContent = msg; yes.textContent = yesLabel || 'Ja';
+    const close = () => { box.classList.add('hidden'); this.confirmOpen = null; };
+    const tap = (btn, fn) => { btn.onclick = () => { close(); fn && fn(); }; btn.ontouchend = e => { e.preventDefault(); e.stopPropagation(); this.lastTouch = Date.now(); btn.onclick(); }; };
+    tap(yes, onYes); tap(no, onNo);
+    box.onclick = e => { if (e.target === box) { close(); onNo && onNo(); } };
+    this.confirmOpen = { onNo }; box.classList.remove('hidden');
+  },
+  closeConfirm() { if (!this.confirmOpen) return false; const c = this.confirmOpen; this.$('confirm').classList.add('hidden'); this.confirmOpen = null; c.onNo && c.onNo(); return true; },
+
   // ---- meldingen ----------------------------------------------------------
   notify(msg, type) {
     const box = this.$('toasts'); const t = Util.el('div', 'toast ' + (type || 'info'), Util.esc(msg));
@@ -48,9 +61,20 @@ const UI = {
     for (const it of DATA.itemsByCat[id]) {
       const card = Util.el('div', 'item');
       card.appendChild(this.preview(it));
-      const costTxt = it.kind === 'staff' ? Util.euro(it.wage) + '/dag' : Util.euro(it.cost) + (it.upkeep ? ' <small>+' + Util.euro(it.upkeep) + '/dag</small>' : '');
+      const landCost = it.kind === 'land' ? World.landCost(it.dir) : 0;
+      const costTxt = it.kind === 'staff' ? Util.euro(it.wage) + '/dag' : it.kind === 'land' ? (landCost ? Util.euro(landCost) : 'niet beschikbaar') : Util.euro(it.cost) + (it.upkeep ? ' <small>+' + Util.euro(it.upkeep) + '/dag</small>' : '');
       card.appendChild(Util.el('div', 'item-info', '<b>' + it.name + '</b><span class="cost">' + costTxt + '</span><small>' + Util.esc(it.desc) + '</small>'));
-      card.onclick = () => { if (it.kind === 'staff') { Staff.hire(it.id); this.flash(card); } else this.setTool(it); };
+      if (it.kind === 'land') { card.onmouseenter = () => { this.landHover = it.dir; }; card.onmouseleave = () => { this.landHover = null; }; }
+      card.onclick = () => {
+        if (it.kind === 'staff') { Staff.hire(it.id); this.flash(card); return; }
+        if (it.kind === 'land') {
+          if (!landCost) { this.notify('Aan deze kant is geen grond meer te koop.', 'warn'); return; }
+          this.landHover = it.dir; // strook licht op zolang de vraag open staat (ook op touch)
+          this.confirmDialog('Strook grond van ' + DATA.LAND_STRIP + ' tegels aan de ' + { n: 'noordkant', w: 'westkant', e: 'oostkant' }[it.dir] + ' kopen voor ' + Util.euro(landCost) + '?', () => { this.landHover = null; if (Game.buyLand(it.dir)) { this.openCategory(null); this.openCategory(id); } }, 'Kopen', () => { this.landHover = null; });
+          return;
+        }
+        this.setTool(it);
+      };
       card.dataset.id = it.id;
       list.appendChild(card);
     }
@@ -67,19 +91,52 @@ const UI = {
     else if (it.kind === 'animal') { c.save(); c.translate(70, 80); c.scale(3, 3); Sprites.drawAnimal(c, 0, 0, it.id, 1, 0); c.restore(); }
     else if (it.kind === 'staff') { c.save(); c.translate(70, 95); c.scale(3, 3); Sprites.drawPerson(c, 0, 0, { shirt: it.color, skin: C.skins[0], hair: C.hairs[1], pants: '#3b4a6b', dir: 1, tool: it.id === 'schoonmaker' ? 'bezem' : it.id === 'monteur' ? 'kist' : 'vlag', vest: it.id === 'monteur' ? '#ff8c00' : null }, 0); c.restore(); }
     else if (it.kind === 'demolish') { c.font = '60px sans-serif'; c.textAlign = 'center'; c.fillText('🧨', 70, 80); }
+    else if (it.kind === 'land') { c.drawImage(Sprites.ground('gras', 1), 10, 30, 120, 60); c.fillStyle = 'rgba(241,196,15,0.9)'; c.font = 'bold 44px sans-serif'; c.textAlign = 'center'; c.fillText({ n: '↑', w: '←', e: '→' }[it.dir], 70, 76); }
     else { const sp = Sprites.get(it.id, 0); const sc = Math.min(130 / sp.w, 100 / sp.h, 1.2); c.drawImage(sp.cv, 70 - sp.w * sc / 2, 55 - sp.h * sc / 2, sp.w * sc, sp.h * sc); }
     this.previews.set(it.id, cv);
     return cv;
   },
   copyCanvas(src) { const cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height; cv.className = src.className; cv.getContext('2d').drawImage(src, 0, 0); return cv; },
-  setTool(def) {
+  setTool(def, keepMove) {
+    if (this.moving && !keepMove) this.cancelMove();
+    if (def !== this.tool) this.toolMirror = keepMove && this.moving ? this.moving.mirror : false;
     this.tool = def;
     document.querySelectorAll('#build-list .item').forEach(e => e.classList.toggle('active', !!def && e.dataset.id === def.id));
-    const h = this.$('hint');
-    if (!def) { h.classList.add('hidden'); Render.canvas.style.cursor = 'default'; return; }
-    h.classList.remove('hidden'); Render.canvas.style.cursor = 'crosshair';
+    Render.canvas.style.cursor = def ? 'crosshair' : 'default';
+    this.renderHint();
+  },
+  canMirror(def) { return !!def && (def.kind === 'spot' || def.kind === 'facility' || def.kind === 'deco'); },
+  rotateTool() { if (!this.canMirror(this.tool)) return; this.toolMirror = !this.toolMirror; },
+  renderHint() {
+    const def = this.tool, h = this.$('hint');
+    if (!def) { h.classList.add('hidden'); return; }
+    h.classList.remove('hidden');
     const extra = def.kind === 'path' || def.kind === 'terrain' ? ' Sleep om meerdere tegels te leggen.' : def.kind === 'demolish' ? ' Klik op een object, pad of dier.' : '';
-    h.innerHTML = '<b>' + def.name + '</b>' + (def.cost ? ' · ' + Util.euro(def.cost) : '') + extra + ' <span class="muted">Esc of rechtermuisknop om te stoppen.</span>';
+    const placeable = def.kind !== 'demolish' && def.kind !== 'path' && def.kind !== 'terrain' && def.kind !== 'staff';
+    h.innerHTML = '<b>' + (this.moving ? 'Verplaatsen: ' : '') + def.name + '</b>' + (def.cost && !this.moving ? ' · ' + Util.euro(def.cost) : '') + extra +
+      (this.canMirror(def) ? ' <button id="hint-rot" class="hb" title="Draaien (R)">↻ Draaien</button>' : '') +
+      (placeable && this.touchMode ? ' <button id="hint-place" class="hb primary">✓ Plaatsen</button>' : '') +
+      ' <button id="hint-cancel" class="hb">✕ ' + (this.moving ? 'Annuleren' : 'Stoppen') + '</button>' +
+      (this.touchMode ? (placeable ? ' <span class="muted">Tik op het terrein om te mikken, dan Plaatsen.</span>' : '') : ' <span class="muted">Esc of rechtermuisknop om te stoppen.</span>');
+    if (this.$('hint-rot')) this.$('hint-rot').onclick = () => this.rotateTool();
+    if (this.$('hint-place')) this.$('hint-place').onclick = () => { if (Render.hover) this.applyTool(Render.hover, null); };
+    this.$('hint-cancel').onclick = () => { this.setTool(null); if (this.category === 'slopen') this.openCategory(null); };
+    h.querySelectorAll('.hb').forEach(b => b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); this.lastTouch = Date.now(); b.onclick(); }, { passive: false }));
+  },
+  // ---- verplaatsen ----
+  startMove(o) {
+    const def = DATA.items[o.type];
+    if (o.occupant) { this.notify('Er staan nog gasten op deze plek. Wacht tot ze vertrokken zijn.', 'warn'); return; }
+    for (const gid of [...o.users]) { const g = Guests.guests.get(gid); if (g) Guests.finishUse(g, true); }
+    for (const g of Guests.guests.values()) if (g.insideObj === o.id) g.insideObj = 0;
+    World.remove(o);
+    this.moving = o; this.select(null);
+    this.setTool(def, true); this.toolMirror = !!o.mirror; this.renderHint();
+    Render.hover = [o.x, o.y];
+  },
+  cancelMove() {
+    const o = this.moving; this.moving = null; if (!o) return;
+    World.placeExisting(o, o.x, o.y, o.mirror);
   },
 
   // ---- selectie / infopaneel ----------------------------------------------------
@@ -109,6 +166,7 @@ const UI = {
         if (d.upkeep) html += '<div class="row"><span>Onderhoud</span><b>' + Util.euro(d.upkeep) + '/dag</b></div>';
         if (d.service && d.service !== 'checkin') html += '<button class="small" id="info-toggle">' + (o.open ? 'Sluiten' : 'Openen') + '</button>';
       }
+      if (!o.occupant) { html += '<button class="small" id="info-move">Verplaatsen</button>'; if (this.canMirror(d)) html += '<button class="small" id="info-rotate">↻ Draaien</button>'; }
       html += '<button class="small danger" id="info-demolish">Slopen (' + Util.euro(Math.floor((d.cost || 0) * 0.5)) + ' terug)</button>';
     } else if (s.kind === 'guest') {
       const g = Guests.guests.get(s.id); if (!g) { this.select(null); return; }
@@ -125,6 +183,7 @@ const UI = {
       title.textContent = st.name;
       html += '<div class="row"><span>' + DATA.staff[st.role].name + '</span><b>' + Util.esc(Staff.statusText(st)) + '</b></div>';
       html += '<div class="row"><span>Loon</span><b>' + Util.euro(DATA.staff[st.role].wage) + '/dag</b></div><div class="row"><span>Taken gedaan</span><b>' + st.tasksDone + '</b></div>';
+      if (st.role === 'schoonmaker') html += '<div class="focus"><b>Focus</b><div class="seg">' + Object.entries(DATA.staffFocus).map(([k, n]) => '<button class="seg-btn' + ((st.focus || 'alles') === k ? ' on' : '') + '" data-focus="' + k + '">' + n + '</button>').join('') + '</div></div>';
       html += '<button class="small" id="info-follow">Camera hierheen</button><button class="small danger" id="info-fire">Ontslaan</button>';
     } else if (s.kind === 'animal') {
       const a = Animals.list.get(s.id); if (!a) { this.select(null); return; }
@@ -138,6 +197,9 @@ const UI = {
     if (q('info-toggle')) q('info-toggle').onclick = () => { const o = World.objects.get(s.id); if (o) { o.open = !o.open; if (!o.open) for (const gid of [...o.users]) { const g = Guests.guests.get(gid); if (g) Guests.finishUse(g, true); } this.updateInfo(); } };
     if (q('info-follow')) q('info-follow').onclick = () => { if (s.kind === 'obj') { const o = World.objects.get(s.id); const p = o && Guests.parties.get(o.occupant); if (p && p.members.length) { this.select({ kind: 'guest', id: p.members[0] }); this.centerOn(Guests.guests.get(p.members[0])); } } else { const e = s.kind === 'guest' ? Guests.guests.get(s.id) : Staff.list.get(s.id); if (e) this.centerOn(e); } };
     if (q('info-fire')) q('info-fire').onclick = () => Staff.fire(s.id);
+    if (q('info-move')) q('info-move').onclick = () => { const o = World.objects.get(s.id); if (o) this.startMove(o); };
+    if (q('info-rotate')) q('info-rotate').onclick = () => { const o = World.objects.get(s.id); if (o) { Game.rotateObject(o); this.updateInfo(); } };
+    body.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => { const st = Staff.list.get(s.id); if (st) { st.focus = b.dataset.focus; this.updateInfo(); } });
     if (q('info-sell')) q('info-sell').onclick = () => { const a = Animals.list.get(s.id); if (a) { Econ.income('verkoop', Math.floor(DATA.animals[a.kind].cost * 0.5)); Animals.remove(a.id); this.select(null); } };
     body.querySelectorAll('.chip').forEach(ch => ch.onclick = () => { this.select({ kind: 'guest', id: +ch.dataset.g }); });
   },
@@ -195,11 +257,12 @@ const UI = {
     for (const s of Object.values(DATA.staff)) html += '<button data-hire="' + s.id + '">Huur ' + s.name.toLowerCase() + ' in<br><small>' + Util.euro(s.wage) + ' per dag</small></button>';
     html += '</div><h3>In dienst (' + Staff.list.size + ')</h3>';
     const rows = [];
-    for (const s of Staff.list.values()) rows.push([Util.esc(s.name), DATA.staff[s.role].name, Util.esc(Staff.statusText(s)), s.tasksDone + ' taken', '<button class="small danger" data-fire="' + s.id + '">Ontslaan</button>']);
+    for (const s of Staff.list.values()) rows.push([Util.esc(s.name), DATA.staff[s.role].name + (s.role === 'schoonmaker' ? '<br><select data-focus-id="' + s.id + '">' + Object.entries(DATA.staffFocus).map(([k, n]) => '<option value="' + k + '"' + ((s.focus || 'alles') === k ? ' selected' : '') + '>' + n + '</option>').join('') + '</select>' : ''), Util.esc(Staff.statusText(s)), s.tasksDone + ' taken', '<button class="small danger" data-fire="' + s.id + '">Ontslaan</button>']);
     html += rows.length ? this.table(rows) : '<p class="muted">Je hebt nog geen personeel. Zonder schoonmakers wordt het snel een rommel!</p>';
     b.innerHTML = html;
     b.querySelectorAll('[data-hire]').forEach(x => x.onclick = () => { Staff.hire(x.dataset.hire); this.refreshModal(); });
     b.querySelectorAll('[data-fire]').forEach(x => x.onclick = () => { Staff.fire(+x.dataset.fire); this.refreshModal(); });
+    b.querySelectorAll('[data-focus-id]').forEach(x => x.onchange = () => { const st = Staff.list.get(+x.dataset.focusId); if (st) st.focus = x.value; });
   },
   pricesPanel(b) {
     const rf = 0.7 + Econ.rating / 100 * 0.6;
@@ -217,17 +280,28 @@ const UI = {
     b.innerHTML = this.table(rows) + '<h3>Tips</h3><ul class="tips">' + DATA.tips.map(t => '<li>' + Util.esc(t) + '</li>').join('') + '</ul>';
   },
   menuPanel(b) {
-    b.innerHTML = '<div class="menu"><button id="m-save">💾 Opslaan</button><button id="m-load">📂 Laden</button><button id="m-export">⬇️ Exporteren (bestand)</button><button id="m-import">⬆️ Importeren (bestand)</button><button id="m-rename">✏️ Camping hernoemen</button><button id="m-new" class="danger">🆕 Nieuw spel</button></div>' +
+    b.innerHTML = '<div class="menu"><button id="m-save">💾 Opslaan (slot ' + Game.slot + ')</button><button id="m-campings">🏕️ Mijn campings (wisselen / nieuw)</button><button id="m-export">⬇️ Exporteren (bestand)</button><button id="m-import">⬆️ Importeren (bestand)</button><button id="m-rename">✏️ Camping hernoemen</button></div>' +
       '<input type="file" id="m-file" accept="application/json" class="hidden">' +
       '<h3>Besturing</h3><ul class="tips"><li>Slepen met de muis (of rechtermuisknop) om te schuiven, scrollen om te zoomen, pijltjes/WASD werken ook.</li><li>Klik op gasten, personeel, dieren of gebouwen voor informatie.</li><li>Spatie pauzeert, 1 / 2 / 3 zetten de snelheid, Esc stopt het bouwen.</li><li>Het spel wordt elke minuut automatisch opgeslagen in je browser.</li></ul>' +
       '<p class="muted">Camping Tycoon · een browsergame zonder server. Alles wordt lokaal in je browser bewaard.</p>';
     this.$('m-save').onclick = () => { Game.save(); this.notify('Spel opgeslagen.', 'good'); };
-    this.$('m-load').onclick = () => { if (Game.load()) { this.notify('Spel geladen.', 'good'); this.closeModal(); } else this.notify('Geen opgeslagen spel gevonden.', 'warn'); };
+    this.$('m-campings').onclick = () => { Game.save(); this.closeModal(); Game.showStart(); };
     this.$('m-export').onclick = () => Game.exportSave();
     this.$('m-import').onclick = () => this.$('m-file').click();
     this.$('m-file').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { if (Game.loadFromString(r.result)) { this.notify('Spel geïmporteerd.', 'good'); this.closeModal(); } else this.notify('Bestand kon niet worden gelezen.', 'bad'); }; r.readAsText(f); };
     this.$('m-rename').onclick = () => { const n = prompt('Nieuwe naam voor je camping:', Game.name); if (n && n.trim()) { Game.name = n.trim().slice(0, 30); this.updateHud(); } };
-    this.$('m-new').onclick = () => { if (confirm('Weet je zeker dat je een nieuw spel wilt starten? Het huidige spel gaat verloren (tenzij je het hebt geëxporteerd).')) { this.closeModal(); Game.showStart(); } };
+  },
+
+  campingsPanel(b) {
+    const slots = Game.listSlots();
+    let html = '<p class="muted">Je kunt ' + DATA.SAVE_SLOTS + ' campings bewaren en er één tegelijk spelen. De huidige camping staat in slot ' + Game.slot + '.</p>';
+    html += this.table(slots.map((s, i) => { const n = i + 1, cur = n === Game.slot; return ['<b>Slot ' + n + '</b>' + (cur ? ' <small class="good">(actief)</small>' : ''),
+      s ? Util.esc(s.name) + '<br><small class="muted">' + Util.esc(s.date) + ' · ' + Util.euro(s.money) + ' · ' + s.stars + ' ★ · ' + s.guests + ' gasten</small>' : '<span class="muted">leeg</span>',
+      (s && !cur ? '<button class="small" data-load="' + n + '">Laden</button>' : '') + (!cur ? '<button class="small" data-newslot="' + n + '">Nieuwe camping</button>' : '') + (s && !cur ? '<button class="small danger" data-del="' + n + '">Verwijderen</button>' : '')]; }));
+    b.innerHTML = html;
+    b.querySelectorAll('[data-load]').forEach(x => x.onclick = () => { Game.save(); if (Game.load(+x.dataset.load)) { this.closeModal(); this.notify('Camping geladen.', 'good'); } });
+    b.querySelectorAll('[data-newslot]').forEach(x => x.onclick = () => { Game.save(); this.closeModal(); Game.showStart(+x.dataset.newslot); });
+    b.querySelectorAll('[data-del]').forEach(x => x.onclick = () => this.confirmDialog('Camping in slot ' + x.dataset.del + ' definitief verwijderen?', () => { Game.deleteSlot(+x.dataset.del); this.refreshModal(); }, 'Verwijderen'));
   },
 
   // ---- invoer -------------------------------------------------------------------
@@ -242,6 +316,7 @@ const UI = {
       else this.clickCand = { x: e.clientX, y: e.clientY, moved: false };
     });
     window.addEventListener('mousemove', e => {
+      if (Date.now() - this.lastTouch < 1000) return; // nagebootste muisgebeurtenis na een tik
       const [tx, ty] = Render.screenToTile(e.clientX, e.clientY); Render.hover = [Math.floor(tx), Math.floor(ty)];
       if (this.pan) { Render.cam.x -= (e.clientX - this.pan.x) / Render.cam.zoom; Render.cam.y -= (e.clientY - this.pan.y) / Render.cam.zoom; this.pan = { x: e.clientX, y: e.clientY }; Render.clampCamera(); return; }
       if (this.clickCand) { if (Math.abs(e.clientX - this.clickCand.x) > 4 || Math.abs(e.clientY - this.clickCand.y) > 4) this.clickCand.moved = true; if (this.clickCand.moved) { Render.cam.x -= (e.clientX - this.clickCand.x) / Render.cam.zoom; Render.cam.y -= (e.clientY - this.clickCand.y) / Render.cam.zoom; this.clickCand.x = e.clientX; this.clickCand.y = e.clientY; Render.clampCamera(); } return; }
@@ -256,30 +331,34 @@ const UI = {
     window.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       Game.keys.add(e.key.toLowerCase());
-      if (e.key === 'Escape') { if (!this.$('modal').classList.contains('hidden')) this.closeModal(); else if (this.tool) { this.setTool(null); if (this.category === 'slopen') this.openCategory(null); } else if (this.category) this.openCategory(null); else this.select(null); }
+      if (e.key === 'Escape') { if (this.closeConfirm()) { } else if (!this.$('modal').classList.contains('hidden')) this.closeModal(); else if (this.tool) { this.setTool(null); if (this.category === 'slopen') this.openCategory(null); } else if (this.category) this.openCategory(null); else this.select(null); }
       if (e.key === ' ') { e.preventDefault(); Game.setSpeed(Game.speed ? 0 : (Game.prevSpeed || 1)); }
       if (e.key === '1') Game.setSpeed(1); if (e.key === '2') Game.setSpeed(2); if (e.key === '3') Game.setSpeed(4);
       if (e.key === 'Delete' || e.key.toLowerCase() === 'x') this.openCategory('slopen');
+      if (e.key.toLowerCase() === 'r') { if (this.tool) this.rotateTool(); else if (this.selected && this.selected.kind === 'obj') { const o = World.objects.get(this.selected.id); if (o) { Game.rotateObject(o); this.updateInfo(); } } }
       if (e.key === '+' || e.key === '=') this.zoomAt(Render.W / 2, Render.H / 2, 1.2); if (e.key === '-') this.zoomAt(Render.W / 2, Render.H / 2, 1 / 1.2);
     });
     window.addEventListener('keyup', e => Game.keys.delete(e.key.toLowerCase()));
+    document.addEventListener('touchstart', () => { this.lastTouch = Date.now(); if (!this.touchMode) { this.touchMode = true; this.renderHint(); } }, { passive: true, capture: true });
     window.addEventListener('blur', () => Game.keys.clear());
     // touch
     cv.addEventListener('touchstart', e => {
-      e.preventDefault();
+      e.preventDefault(); this.lastTouch = Date.now();
       if (e.touches.length === 2) { const a = e.touches[0], b = e.touches[1]; this.pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 }; this.clickCand = null; this.painting = false; return; }
-      const t = e.touches[0]; const [tx, ty] = Render.screenToTile(t.clientX, t.clientY); const tile = [Math.floor(tx), Math.floor(ty)]; Render.hover = tile;
-      if (this.tool) { this.applyTool(tile, e); if (this.tool.kind === 'path' || this.tool.kind === 'terrain' || this.tool.kind === 'demolish') { this.painting = true; this.lastPaint = tile.join(','); } }
-      else this.clickCand = { x: t.clientX, y: t.clientY, moved: false };
+      if (!this.touchMode) { this.touchMode = true; this.renderHint(); }
+      const t = e.touches[0]; const [tx, ty] = Render.screenToTile(t.clientX, t.clientY); const tile = [Math.floor(tx), Math.floor(ty)];
+      const direct = this.tool && (this.tool.kind === 'path' || this.tool.kind === 'terrain' || this.tool.kind === 'demolish');
+      if (direct) { Render.hover = tile; this.applyTool(tile, e); this.painting = true; this.lastPaint = tile.join(','); }
+      else this.clickCand = { x: t.clientX, y: t.clientY, moved: false, tile, aim: !!this.tool }; // tik = mikken (met gereedschap) of selecteren
     }, { passive: false });
     cv.addEventListener('touchmove', e => {
-      e.preventDefault();
+      e.preventDefault(); this.lastTouch = Date.now();
       if (e.touches.length === 2 && this.pinch) { const a = e.touches[0], b = e.touches[1]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), x = (a.clientX + b.clientX) / 2, y = (a.clientY + b.clientY) / 2; this.zoomAt(x, y, d / this.pinch.d); Render.cam.x -= (x - this.pinch.x) / Render.cam.zoom; Render.cam.y -= (y - this.pinch.y) / Render.cam.zoom; this.pinch = { d, x, y }; return; }
-      const t = e.touches[0]; const [tx, ty] = Render.screenToTile(t.clientX, t.clientY); Render.hover = [Math.floor(tx), Math.floor(ty)];
+      const t = e.touches[0]; const [tx, ty] = Render.screenToTile(t.clientX, t.clientY); if (this.painting) Render.hover = [Math.floor(tx), Math.floor(ty)];
       if (this.clickCand) { if (Math.abs(t.clientX - this.clickCand.x) > 6 || Math.abs(t.clientY - this.clickCand.y) > 6) this.clickCand.moved = true; if (this.clickCand.moved) { Render.cam.x -= (t.clientX - this.clickCand.x) / Render.cam.zoom; Render.cam.y -= (t.clientY - this.clickCand.y) / Render.cam.zoom; this.clickCand.x = t.clientX; this.clickCand.y = t.clientY; Render.clampCamera(); } }
       else if (this.painting && this.tool) { const key = Render.hover.join(','); if (key !== this.lastPaint) { this.lastPaint = key; this.applyTool(Render.hover, e); } }
     }, { passive: false });
-    cv.addEventListener('touchend', e => { e.preventDefault(); if (e.touches.length < 2) this.pinch = null; if (this.clickCand && !this.clickCand.moved) this.pick(this.clickCand.x, this.clickCand.y); this.clickCand = null; this.painting = false; }, { passive: false });
+    cv.addEventListener('touchend', e => { e.preventDefault(); this.lastTouch = Date.now(); if (e.touches.length < 2) this.pinch = null; if (this.clickCand && !this.clickCand.moved) { if (this.clickCand.aim) Render.hover = this.clickCand.tile; else this.pick(this.clickCand.x, this.clickCand.y); } this.clickCand = null; this.painting = false; }, { passive: false });
   },
   zoomAt(mx, my, f) {
     const cam = Render.cam, old = cam.zoom, nz = Util.clamp(old * f, 0.35, 3);
@@ -302,6 +381,7 @@ const UI = {
   applyTool(tile, e) {
     const t = this.tool; if (!t) return;
     if (t.kind === 'demolish') { const ent = e && e.clientX !== undefined ? this.entityAt(e.clientX, e.clientY) : null; if (ent && ent.kind === 'animal') { const a = Animals.list.get(ent.id); Econ.income('verkoop', Math.floor(DATA.animals[a.kind].cost * 0.5)); Animals.remove(a.id); return; } Game.demolishAt(tile[0], tile[1]); return; }
-    Game.build(t, tile[0], tile[1]);
+    if (this.moving) { const o = this.moving; if (Game.moveObject(o, tile[0], tile[1], this.toolMirror)) { this.moving = null; this.setTool(null); this.select({ kind: 'obj', id: o.id }); } return; }
+    Game.build(t, tile[0], tile[1], this.toolMirror);
   },
 };
