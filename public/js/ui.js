@@ -111,7 +111,7 @@ const UI = {
     const def = this.tool, h = this.$('hint');
     if (!def) { h.classList.add('hidden'); return; }
     h.classList.remove('hidden');
-    const extra = def.kind === 'path' || def.kind === 'terrain' ? ' Sleep om meerdere tegels te leggen.' : def.kind === 'demolish' ? ' Klik op een object, pad of dier.' : '';
+    const extra = def.kind === 'path' || def.kind === 'terrain' ? ' Sleep om meerdere tegels te leggen.' : def.kind === 'demolish' ? ' Klik op een object, pad of dier. Gebouwen vragen om bevestiging; slepen haalt alleen paden en begroeiing weg.' : '';
     const placeable = def.kind !== 'demolish' && def.kind !== 'path' && def.kind !== 'terrain' && def.kind !== 'staff';
     h.innerHTML = '<b>' + (this.moving ? 'Verplaatsen: ' : '') + def.name + '</b>' + (def.cost && !this.moving ? ' · ' + Util.euro(def.cost) : '') + extra +
       (this.canMirror(def) ? ' <button id="hint-rot" class="hb" title="Draaien (R)">↻ Draaien</button>' : '') +
@@ -193,14 +193,14 @@ const UI = {
     }
     body.innerHTML = html; panel.classList.remove('hidden');
     const q = id => this.$(id);
-    if (q('info-demolish')) q('info-demolish').onclick = () => { const o = World.objects.get(s.id); if (o) Game.demolishObject(o); };
+    if (q('info-demolish')) q('info-demolish').onclick = () => { const o = World.objects.get(s.id); if (!o) return; if (o.occupant) { this.notify('Er staan nog gasten op deze plek! Wacht tot ze vertrokken zijn.', 'warn'); return; } if (DATA.items[o.type].kind === 'deco') Game.demolishObject(o); else Game.confirmDemolish(o); };
     if (q('info-toggle')) q('info-toggle').onclick = () => { const o = World.objects.get(s.id); if (o) { o.open = !o.open; if (!o.open) for (const gid of [...o.users]) { const g = Guests.guests.get(gid); if (g) Guests.finishUse(g, true); } this.updateInfo(); } };
     if (q('info-follow')) q('info-follow').onclick = () => { if (s.kind === 'obj') { const o = World.objects.get(s.id); const p = o && Guests.parties.get(o.occupant); if (p && p.members.length) { this.select({ kind: 'guest', id: p.members[0] }); this.centerOn(Guests.guests.get(p.members[0])); } } else { const e = s.kind === 'guest' ? Guests.guests.get(s.id) : Staff.list.get(s.id); if (e) this.centerOn(e); } };
-    if (q('info-fire')) q('info-fire').onclick = () => Staff.fire(s.id);
+    if (q('info-fire')) q('info-fire').onclick = () => { const st = Staff.list.get(s.id); if (st) this.confirmDialog(DATA.staff[st.role].name + ' ' + st.name + ' ontslaan?', () => Staff.fire(s.id), 'Ontslaan'); };
     if (q('info-move')) q('info-move').onclick = () => { const o = World.objects.get(s.id); if (o) this.startMove(o); };
     if (q('info-rotate')) q('info-rotate').onclick = () => { const o = World.objects.get(s.id); if (o) { Game.rotateObject(o); this.updateInfo(); } };
     body.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => { const st = Staff.list.get(s.id); if (st) { st.focus = b.dataset.focus; this.updateInfo(); } });
-    if (q('info-sell')) q('info-sell').onclick = () => { const a = Animals.list.get(s.id); if (a) { Econ.income('verkoop', Math.floor(DATA.animals[a.kind].cost * 0.5)); Animals.remove(a.id); this.select(null); } };
+    if (q('info-sell')) q('info-sell').onclick = () => { const a = Animals.list.get(s.id); if (a) Game.sellAnimal(a, true); };
     body.querySelectorAll('.chip').forEach(ch => ch.onclick = () => { this.select({ kind: 'guest', id: +ch.dataset.g }); });
   },
   centerOn(e) { const [wx, wy] = Render.tileToWorld(e.x, e.y); Render.cam.x = wx; Render.cam.y = wy; },
@@ -261,7 +261,7 @@ const UI = {
     html += rows.length ? this.table(rows) : '<p class="muted">Je hebt nog geen personeel. Zonder schoonmakers wordt het snel een rommel!</p>';
     b.innerHTML = html;
     b.querySelectorAll('[data-hire]').forEach(x => x.onclick = () => { Staff.hire(x.dataset.hire); this.refreshModal(); });
-    b.querySelectorAll('[data-fire]').forEach(x => x.onclick = () => { Staff.fire(+x.dataset.fire); this.refreshModal(); });
+    b.querySelectorAll('[data-fire]').forEach(x => x.onclick = () => { const st = Staff.list.get(+x.dataset.fire); if (st) this.confirmDialog(DATA.staff[st.role].name + ' ' + st.name + ' ontslaan?', () => { Staff.fire(st.id); this.refreshModal(); }, 'Ontslaan'); });
     b.querySelectorAll('[data-focus-id]').forEach(x => x.onchange = () => { const st = Staff.list.get(+x.dataset.focusId); if (st) st.focus = x.value; });
   },
   pricesPanel(b) {
@@ -320,7 +320,7 @@ const UI = {
       const [tx, ty] = Render.screenToTile(e.clientX, e.clientY); Render.hover = [Math.floor(tx), Math.floor(ty)];
       if (this.pan) { Render.cam.x -= (e.clientX - this.pan.x) / Render.cam.zoom; Render.cam.y -= (e.clientY - this.pan.y) / Render.cam.zoom; this.pan = { x: e.clientX, y: e.clientY }; Render.clampCamera(); return; }
       if (this.clickCand) { if (Math.abs(e.clientX - this.clickCand.x) > 4 || Math.abs(e.clientY - this.clickCand.y) > 4) this.clickCand.moved = true; if (this.clickCand.moved) { Render.cam.x -= (e.clientX - this.clickCand.x) / Render.cam.zoom; Render.cam.y -= (e.clientY - this.clickCand.y) / Render.cam.zoom; this.clickCand.x = e.clientX; this.clickCand.y = e.clientY; Render.clampCamera(); } return; }
-      if (this.painting && this.tool) { const key = Render.hover.join(','); if (key !== this.lastPaint) { this.lastPaint = key; this.applyTool(Render.hover, e); } }
+      if (this.painting && this.tool) { const key = Render.hover.join(','); if (key !== this.lastPaint) { this.lastPaint = key; this.applyTool(Render.hover, e, true); } }
     });
     window.addEventListener('mouseup', e => {
       if (e.button === 2 || e.button === 1) { this.pan = null; return; }
@@ -356,7 +356,7 @@ const UI = {
       if (e.touches.length === 2 && this.pinch) { const a = e.touches[0], b = e.touches[1]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), x = (a.clientX + b.clientX) / 2, y = (a.clientY + b.clientY) / 2; this.zoomAt(x, y, d / this.pinch.d); Render.cam.x -= (x - this.pinch.x) / Render.cam.zoom; Render.cam.y -= (y - this.pinch.y) / Render.cam.zoom; this.pinch = { d, x, y }; return; }
       const t = e.touches[0]; const [tx, ty] = Render.screenToTile(t.clientX, t.clientY); if (this.painting) Render.hover = [Math.floor(tx), Math.floor(ty)];
       if (this.clickCand) { if (Math.abs(t.clientX - this.clickCand.x) > 6 || Math.abs(t.clientY - this.clickCand.y) > 6) this.clickCand.moved = true; if (this.clickCand.moved) { Render.cam.x -= (t.clientX - this.clickCand.x) / Render.cam.zoom; Render.cam.y -= (t.clientY - this.clickCand.y) / Render.cam.zoom; this.clickCand.x = t.clientX; this.clickCand.y = t.clientY; Render.clampCamera(); } }
-      else if (this.painting && this.tool) { const key = Render.hover.join(','); if (key !== this.lastPaint) { this.lastPaint = key; this.applyTool(Render.hover, e); } }
+      else if (this.painting && this.tool) { const key = Render.hover.join(','); if (key !== this.lastPaint) { this.lastPaint = key; this.applyTool(Render.hover, e, true); } }
     }, { passive: false });
     cv.addEventListener('touchend', e => { e.preventDefault(); this.lastTouch = Date.now(); if (e.touches.length < 2) this.pinch = null; if (this.clickCand && !this.clickCand.moved) { if (this.clickCand.aim) Render.hover = this.clickCand.tile; else this.pick(this.clickCand.x, this.clickCand.y); } this.clickCand = null; this.painting = false; }, { passive: false });
   },
@@ -378,9 +378,9 @@ const UI = {
     const [tx, ty] = Render.screenToTile(mx, my); const o = World.objAt(Math.floor(tx), Math.floor(ty));
     this.select(o ? { kind: 'obj', id: o.id } : null);
   },
-  applyTool(tile, e) {
+  applyTool(tile, e, dragging) {
     const t = this.tool; if (!t) return;
-    if (t.kind === 'demolish') { const ent = e && e.clientX !== undefined ? this.entityAt(e.clientX, e.clientY) : null; if (ent && ent.kind === 'animal') { const a = Animals.list.get(ent.id); Econ.income('verkoop', Math.floor(DATA.animals[a.kind].cost * 0.5)); Animals.remove(a.id); return; } Game.demolishAt(tile[0], tile[1]); return; }
+    if (t.kind === 'demolish') { const ent = !dragging && e && e.clientX !== undefined ? this.entityAt(e.clientX, e.clientY) : null; if (ent && ent.kind === 'animal') { const a = Animals.list.get(ent.id); if (a) Game.sellAnimal(a, true); return; } Game.demolishAt(tile[0], tile[1], !!dragging); return; }
     if (this.moving) { const o = this.moving; if (Game.moveObject(o, tile[0], tile[1], this.toolMirror)) { this.moving = null; this.setTool(null); this.select({ kind: 'obj', id: o.id }); } return; }
     Game.build(t, tile[0], tile[1], this.toolMirror);
   },

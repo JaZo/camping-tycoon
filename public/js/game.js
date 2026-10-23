@@ -142,10 +142,18 @@ const Game = {
     if (def.id === 'receptie' && World.listByType('receptie').length === 1) UI.notify('Receptie gebouwd! Zorg dat hij via een pad met de ingang verbonden is.', 'good');
     return o;
   },
-  demolishAt(x, y) {
+  // dragging: bij slepen met het sloopgereedschap alleen paden en begroeiing weghalen, nooit gebouwen
+  demolishAt(x, y, dragging) {
     if (!World.inb(x, y)) return;
     const o = World.objAt(x, y);
-    if (o) { this.demolishObject(o); return; }
+    if (o) {
+      const d = DATA.items[o.type];
+      if (d.kind === 'deco') { this.demolishObject(o); return; }
+      if (dragging) return;
+      if (o.occupant) { UI.notify('Er staan nog gasten op deze plek! Wacht tot ze vertrokken zijn.', 'warn'); return; }
+      this.confirmDemolish(o);
+      return;
+    }
     const i = World.idx(x, y);
     if (World.path[i]) { if (World.isEntrance(x, y) || (x === World.entrance.x && y === World.entrance.y - 1)) { UI.notify('De ingang kan niet weg.', 'warn'); return; } World.clearPath(x, y); World.litter[i] = 0; return; }
   },
@@ -172,6 +180,15 @@ const Game = {
     World.buyLand(dir); Econ.expense('terrein', cost); this.stats.landBought = (this.stats.landBought || 0) + 1;
     UI.notify('Strook grond gekocht voor ' + Util.euro(cost) + '. Je terrein is nu ' + World.ownedW() + ' × ' + World.ownedH() + ' tegels.', 'good');
     return true;
+  },
+  confirmDemolish(o) {
+    const d = DATA.items[o.type], refund = Math.floor((d.cost || 0) * 0.5);
+    UI.confirmDialog(d.name + ' slopen?' + (refund ? ' Je krijgt ' + Util.euro(refund) + ' terug.' : ''), () => { if (World.objects.has(o.id)) this.demolishObject(o); }, 'Slopen');
+  },
+  sellAnimal(a, ask) {
+    const d = DATA.animals[a.kind], price = Math.floor(d.cost * 0.5);
+    const doSell = () => { if (!Animals.list.has(a.id)) return; Econ.income('verkoop', price); Animals.remove(a.id); if (UI.selected && UI.selected.kind === 'animal' && UI.selected.id === a.id) UI.select(null); };
+    if (ask) UI.confirmDialog(d.name + ' verkopen voor ' + Util.euro(price) + '?', doSell, 'Verkopen'); else doSell();
   },
   demolishObject(o) {
     const def = DATA.items[o.type];

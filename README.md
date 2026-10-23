@@ -46,7 +46,7 @@ Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). 
 | Stoppen met bouwen | `Esc` of rechtermuisknop |
 | Informatie | klik op een gebouw, gast, personeelslid of dier |
 | Pauze / snelheid | spatie, `1`, `2`, `3` |
-| Slopen | `X` of `Delete` |
+| Slopen | `X` of `Delete`; gebouwen, dieren en personeel vragen om bevestiging, paden en begroeiing niet (die kun je ook wegslepen) |
 
 ## Ontwikkeling
 
