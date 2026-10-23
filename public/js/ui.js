@@ -52,7 +52,7 @@ const UI = {
 
   // ---- bouwmenu -------------------------------------------------------------
   openCategory(id) {
-    if (this.category === id || !id) { this.category = null; this.$('buildpanel').classList.add('hidden'); if (!id) this.setTool(null); document.querySelectorAll('#toolbar .cat').forEach(b => b.classList.remove('active')); return; }
+    if (this.category === id || !id) { this.category = null; this.$('buildpanel').classList.add('hidden'); this.setTool(null); document.querySelectorAll('#toolbar .cat').forEach(b => b.classList.remove('active')); return; } // menu dicht = gereedschap weg
     this.category = id;
     document.querySelectorAll('#toolbar .cat').forEach(b => b.classList.toggle('active', b.dataset.cat === id));
     if (id === 'slopen') { this.setTool(DATA.items.sloop); this.$('buildpanel').classList.add('hidden'); return; }

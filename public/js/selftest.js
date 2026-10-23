@@ -128,6 +128,8 @@ window.runSelfTest = function () {
         cv.dispatchEvent(new WheelEvent('wheel', { deltaY: 300, clientX: W / 2, clientY: H / 2, bubbles: true, cancelable: true }));
         ev('mousedown', W / 2, H / 2, { button: 2 }); wev('mousemove', W / 2 - 30, H / 2 - 30); wev('mouseup', W / 2 - 30, H / 2 - 30, { button: 2 });
         key('Escape'); log('tool na esc', UI.tool);
+        UI.openCategory('verhuur'); document.querySelector('#build-list .item').click(); document.querySelector('#toolbar .cat[data-cat="verhuur"]').click(); log('tool na sluiten via categorieknop', UI.tool, 'menu dicht', document.getElementById('buildpanel').classList.contains('hidden'));
+        document.querySelector('#toolbar .cat[data-cat="slopen"]').click(); document.querySelector('#toolbar .cat[data-cat="slopen"]').click(); log('sloop uit na tweede klik', UI.tool);
         UI.openCategory('natuur'); document.querySelectorAll('#build-list .item')[0].click(); ev('mousedown', W / 2 + 100, H / 2 + 60); wev('mouseup', W / 2 + 100, H / 2 + 60); key('Escape'); key('Escape');
         UI.openCategory('dieren'); document.querySelectorAll('#build-list .item')[0].click(); ev('mousedown', W / 2 - 150, H / 2 + 90); wev('mouseup', W / 2 - 150, H / 2 + 90); key('Escape'); key('Escape');
         UI.openCategory('personeel'); document.querySelectorAll('#build-list .item')[2].click(); key('Escape');
