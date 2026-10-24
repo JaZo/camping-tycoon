@@ -21,6 +21,10 @@ const UI = {
     this.$('btn-prices').onclick = () => this.openModal('Prijzen', b => this.pricesPanel(b));
     this.$('btn-goals').onclick = () => this.openModal('Doelen', b => this.goalsPanel(b));
     this.$('btn-menu').onclick = () => this.openModal('Menu', b => this.menuPanel(b));
+    this.$('btn-full').onclick = () => this.toggleFullscreen();
+    for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => this.updateFullBtn());
+    // al schermvullend als web-app op het beginscherm: knop overbodig
+    if ((window.matchMedia && window.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) || navigator.standalone) this.$('btn-full').classList.add('hidden');
     this.$('modal-close').onclick = () => this.closeModal();
     this.$('modal').onclick = e => { if (e.target === this.$('modal')) this.closeModal(); };
     this.$('info-close').onclick = () => this.select(null);
@@ -41,6 +45,20 @@ const UI = {
     this.confirmOpen = { onNo }; box.classList.remove('hidden');
   },
   closeConfirm() { if (!this.confirmOpen) return false; const c = this.confirmOpen; this.$('confirm').classList.add('hidden'); this.confirmOpen = null; c.onNo && c.onNo(); return true; },
+
+  // ---- volledig scherm ----------------------------------------------------
+  isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  toggleFullscreen() {
+    const d = document.documentElement;
+    if (this.isFullscreen()) { const ex = document.exitFullscreen || document.webkitExitFullscreen; if (ex) ex.call(document); return; }
+    const req = d.requestFullscreen || d.webkitRequestFullscreen;
+    if (!req) { this.notify('Deze browser kan de pagina niet schermvullend maken. Tip: zet de pagina via Delen op je beginscherm; dan opent het spel zonder browserbalken.', 'info'); return; }
+    try {
+      const p = req.call(d, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(() => this.notify('Volledig scherm is niet toegestaan door de browser. Tip: zet de pagina op je beginscherm.', 'warn'));
+    } catch (e) { this.notify('Volledig scherm lukt niet in deze browser.', 'warn'); }
+  },
+  updateFullBtn() { const b = this.$('btn-full'); const on = this.isFullscreen(); b.classList.toggle('active', on); b.title = on ? 'Volledig scherm verlaten (F)' : 'Volledig scherm (F)'; },
 
   // ---- meldingen ----------------------------------------------------------
   notify(msg, type) {
@@ -335,6 +353,7 @@ const UI = {
       if (e.key === ' ') { e.preventDefault(); Game.setSpeed(Game.speed ? 0 : (Game.prevSpeed || 1)); }
       if (e.key === '1') Game.setSpeed(1); if (e.key === '2') Game.setSpeed(2); if (e.key === '3') Game.setSpeed(4);
       if (e.key === 'Delete' || e.key.toLowerCase() === 'x') this.openCategory('slopen');
+      if (e.key.toLowerCase() === 'f') this.toggleFullscreen();
       if (e.key.toLowerCase() === 'r') { if (this.tool) this.rotateTool(); else if (this.selected && this.selected.kind === 'obj') { const o = World.objects.get(this.selected.id); if (o) { Game.rotateObject(o); this.updateInfo(); } } }
       if (e.key === '+' || e.key === '=') this.zoomAt(Render.W / 2, Render.H / 2, 1.2); if (e.key === '-') this.zoomAt(Render.W / 2, Render.H / 2, 1 / 1.2);
     });
