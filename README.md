@@ -46,7 +46,7 @@ Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). 
 | Stoppen met bouwen | `Esc` of rechtermuisknop |
 | Informatie | klik op een gebouw, gast, personeelslid of dier |
 | Pauze / snelheid | spatie, `1`, `2`, `3` |
-| Volledig scherm | `F` of de knop ⛶ rechtsboven; op iPad/iPhone kun je de pagina ook via *Delen → Zet op beginscherm* als schermvullende app openen |
+| Volledig scherm | `F` of de knop ⛶ rechtsboven. Op iPad/iPhone staat Apple dit alleen in Safari toe; open het spel daar via *Delen → Zet op beginscherm* als schermvullende app (werkt ook als Firefox je standaardbrowser is) |
 | Slopen | `X` of `Delete`; gebouwen, dieren en personeel vragen om bevestiging, paden en begroeiing niet (die kun je ook wegslepen) |
 
 ## Cache-busting

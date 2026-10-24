@@ -48,15 +48,21 @@ const UI = {
 
   // ---- volledig scherm ----------------------------------------------------
   isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  isApple() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
+  fullscreenTip() {
+    return this.isApple()
+      ? 'Op iPad en iPhone mag alleen Safari een pagina schermvullend maken. Tip: open het spel in Safari, tik op Delen en kies "Zet op beginscherm"; dan opent het als app zonder browserbalken, ook als Firefox je standaardbrowser is.'
+      : 'Deze browser kan de pagina niet schermvullend maken. Tip: zet de pagina via het browsermenu op je beginscherm of installeer hem als app.';
+  },
   toggleFullscreen() {
     const d = document.documentElement;
     if (this.isFullscreen()) { const ex = document.exitFullscreen || document.webkitExitFullscreen; if (ex) ex.call(document); return; }
     const req = d.requestFullscreen || d.webkitRequestFullscreen;
-    if (!req) { this.notify('Deze browser kan de pagina niet schermvullend maken. Tip: zet de pagina via Delen op je beginscherm; dan opent het spel zonder browserbalken.', 'info'); return; }
+    if (!req) { this.notify(this.fullscreenTip(), 'info'); return; }
     try {
       const p = req.call(d, { navigationUI: 'hide' });
-      if (p && p.catch) p.catch(() => this.notify('Volledig scherm is niet toegestaan door de browser. Tip: zet de pagina op je beginscherm.', 'warn'));
-    } catch (e) { this.notify('Volledig scherm lukt niet in deze browser.', 'warn'); }
+      if (p && p.catch) p.catch(() => this.notify(this.fullscreenTip(), 'warn'));
+    } catch (e) { this.notify(this.fullscreenTip(), 'warn'); }
   },
   updateFullBtn() { const b = this.$('btn-full'); const on = this.isFullscreen(); b.classList.toggle('active', on); b.title = on ? 'Volledig scherm verlaten (F)' : 'Volledig scherm (F)'; },
 
