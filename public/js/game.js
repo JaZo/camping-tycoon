@@ -16,8 +16,20 @@ const Game = {
   clockString() { const h = Math.floor(this.t * 24), m = Math.floor((this.t * 24 - h) * 60); return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; },
   setSpeed(s) { if (s === 0 && this.speed) this.prevSpeed = this.speed; this.speed = s; UI.updateHud(); },
 
+  version: (typeof window !== 'undefined' && window.BUILD_VERSION && window.BUILD_VERSION !== '__V__') ? window.BUILD_VERSION : 'dev',
+  // Cache-busting: GitHub Pages cachet bestanden 10 minuten. Vergelijk de ingebakken versie met version.json (buiten de cache om);
+  // bij het opstarten herladen we dan één keer, tijdens het spelen tonen we een melding.
+  checkVersion(silent) {
+    if (this.version === 'dev' || location.protocol === 'file:') return;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => {
+      if (!j || !j.v || j.v === '__V__' || j.v === this.version) return;
+      if (silent && !sessionStorage.getItem('ct_reloaded_' + j.v)) { sessionStorage.setItem('ct_reloaded_' + j.v, '1'); location.reload(); return; }
+      UI.updateNotice(j.v);
+    }).catch(() => {});
+  },
   init() {
     Render.init(); UI.init();
+    this.checkVersion(true); setInterval(() => this.checkVersion(false), 5 * 60 * 1000);
     this.migrateLegacySave();
     window.addEventListener('beforeunload', () => { if (this.started) this.save(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.started) this.save(); });

@@ -23,6 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
+      - name: Versienummer invullen (cache-busting)
+        run: |
+          V="${GITHUB_SHA::7}"
+          sed -i "s/__V__/$V/g" public/index.html
+          echo "{\"v\":\"$V\",\"time\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/version.json
       - uses: actions/upload-pages-artifact@v4
         with:
           path: public

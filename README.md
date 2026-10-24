@@ -49,6 +49,10 @@ Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). 
 | Volledig scherm | `F` of de knop ⛶ rechtsboven; op iPad/iPhone kun je de pagina ook via *Delen → Zet op beginscherm* als schermvullende app openen |
 | Slopen | `X` of `Delete`; gebouwen, dieren en personeel vragen om bevestiging, paden en begroeiing niet (die kun je ook wegslepen) |
 
+## Cache-busting
+
+GitHub Pages laat bestanden tien minuten cachen. De deploy-workflow vult daarom de commit-hash in op de plek van `__V__` in `public/index.html` (als `?v=` achter elke script- en css-link) en schrijft `public/version.json`. Bij het starten vergelijkt het spel zijn ingebakken versie met `version.json` (buiten de cache om) en herlaadt het zichzelf één keer als die afwijkt; tijdens het spelen verschijnt bij een nieuwe versie een melding met een herlaadknop.
+
 ## Ontwikkeling
 
 Er is geen build-stap. De bestanden in `public/js/` worden in volgorde geladen door `public/index.html`:

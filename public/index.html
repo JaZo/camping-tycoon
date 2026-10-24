@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Camping Tycoon">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=__V__">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -92,16 +92,17 @@
   </div>
 </div>
 
-<script src="js/util.js"></script>
-<script src="js/data.js"></script>
-<script src="js/sprites.js"></script>
-<script src="js/world.js"></script>
-<script src="js/guests.js"></script>
-<script src="js/staff.js"></script>
-<script src="js/economy.js"></script>
-<script src="js/render.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/game.js"></script>
-<script src="js/selftest.js"></script>
+<script>window.BUILD_VERSION = '__V__'; // wordt bij deploy vervangen door de commit-hash (cache-busting)</script>
+<script src="js/util.js?v=__V__"></script>
+<script src="js/data.js?v=__V__"></script>
+<script src="js/sprites.js?v=__V__"></script>
+<script src="js/world.js?v=__V__"></script>
+<script src="js/guests.js?v=__V__"></script>
+<script src="js/staff.js?v=__V__"></script>
+<script src="js/economy.js?v=__V__"></script>
+<script src="js/render.js?v=__V__"></script>
+<script src="js/ui.js?v=__V__"></script>
+<script src="js/game.js?v=__V__"></script>
+<script src="js/selftest.js?v=__V__"></script>
 </body>
 </html>

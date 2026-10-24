@@ -60,6 +60,14 @@ const UI = {
   },
   updateFullBtn() { const b = this.$('btn-full'); const on = this.isFullscreen(); b.classList.toggle('active', on); b.title = on ? 'Volledig scherm verlaten (F)' : 'Volledig scherm (F)'; },
 
+  // ---- nieuwe versie beschikbaar ----------------------------------------------
+  updateNotice(v) {
+    if (this.$('update-notice')) return;
+    const t = Util.el('div', 'toast good', 'Er is een nieuwe versie van het spel (' + Util.esc(v) + '). <button class="small" id="update-reload">Nu herladen</button>'); t.id = 'update-notice'; t.style.pointerEvents = 'auto';
+    this.$('toasts').appendChild(t);
+    this.$('update-reload').onclick = () => { Game.save(); location.reload(); };
+  },
+
   // ---- meldingen ----------------------------------------------------------
   notify(msg, type) {
     const box = this.$('toasts'); const t = Util.el('div', 'toast ' + (type || 'info'), Util.esc(msg));
@@ -301,7 +309,7 @@ const UI = {
     b.innerHTML = '<div class="menu"><button id="m-save">💾 Opslaan (slot ' + Game.slot + ')</button><button id="m-campings">🏕️ Mijn campings (wisselen / nieuw)</button><button id="m-export">⬇️ Exporteren (bestand)</button><button id="m-import">⬆️ Importeren (bestand)</button><button id="m-rename">✏️ Camping hernoemen</button></div>' +
       '<input type="file" id="m-file" accept="application/json" class="hidden">' +
       '<h3>Besturing</h3><ul class="tips"><li>Slepen met de muis (of rechtermuisknop) om te schuiven, scrollen om te zoomen, pijltjes/WASD werken ook.</li><li>Klik op gasten, personeel, dieren of gebouwen voor informatie.</li><li>Spatie pauzeert, 1 / 2 / 3 zetten de snelheid, Esc stopt het bouwen.</li><li>Het spel wordt elke minuut automatisch opgeslagen in je browser.</li></ul>' +
-      '<p class="muted">Camping Tycoon · een browsergame zonder server. Alles wordt lokaal in je browser bewaard.</p>';
+      '<p class="muted">Camping Tycoon · versie ' + Util.esc(Game.version) + ' · een browsergame zonder server. Alles wordt lokaal in je browser bewaard.</p>';
     this.$('m-save').onclick = () => { Game.save(); this.notify('Spel opgeslagen.', 'good'); };
     this.$('m-campings').onclick = () => { Game.save(); this.closeModal(); Game.showStart(); };
     this.$('m-export').onclick = () => Game.exportSave();
