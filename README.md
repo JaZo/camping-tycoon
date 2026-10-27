@@ -19,7 +19,7 @@ Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). 
 - **Recreatie**: speeltuin, zwembad, trampoline, midgetgolf, volleybalveld, jeu-de-boulesbaan, kampvuurplaats, recreatiezaal, dierenweide, skelterverhuur en tafeltennistafel. Overdekt: binnenzwembad, binnenspeeltuin, bowlingbaan, fitnessruimte en bioscoop (populair bij regen en in de winter).
 - **Natuur**: eiken, dennen, berken, treurwilgen, appelbomen, struiken, heggen, bloemperken, wilde bloemen en rotsblokken. Sfeer rond een staplek maakt gasten blijer.
 - **Dieren**: geiten, schapen, kippen, koeien, pony's, konijnen en eenden lopen (of zwemmen) vrij rond.
-- **Personeel**: schoonmakers (zwerfafval en sanitair, met instelbare focus), onderhoudsmonteurs (reparaties en preventief onderhoud) en animatiemedewerkers (vermaak, 's avonds bij het kampvuur).
+- **Personeel**: schoonmakers (zwerfafval en sanitair, met instelbare focus), onderhoudsmonteurs (reparaties en preventief onderhoud), tuinmannen (maaien staplekken en verzorgen bloemen, heggen en bomen; zonder tuinman verwildert het terrein langzaam en telt het groen minder mee) en animatiemedewerkers (vermaak, 's avonds bij het kampvuur).
 - **Terrein**: gras, zand en water om zelf een vijver of strandje te maken, en stroken grond bijkopen om het terrein uit te breiden.
 - **Bouwen**: objecten draaien (R) en verplaatsen via het infopaneel; op touchschermen tik je eerst om te mikken en bevestig je met *Plaatsen*.
 - **Meerdere campings**: vier opslagslots, één camping tegelijk actief.

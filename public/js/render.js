@@ -137,7 +137,7 @@ const Render = {
     for (const d of D) {
       if (d.t === 0) this.drawObject(c, d.o, evening);
       else if (d.t === 1) { const dd = DATA.items[d.o.type]; const sp = Sprites.vehicle(d.p.vehicle, dd.w, dd.h, d.p.color, d.o.mirror); const [sx, sy] = this.tileToWorld(d.o.x, d.o.y); c.drawImage(sp.cv, sx - sp.ox, sy - sp.oy, sp.w, sp.h); }
-      else if (d.t === 2 || d.t === 3) { const e = d.e; const [sx, sy] = this.tileToWorld(e.x, e.y); const to = World.objAt(Math.floor(e.x), Math.floor(e.y)); const inWater = to && to.type === 'zwembad' && e.x > to.x + 0.5 && e.x < to.x + 2.5 && e.y > to.y + 0.5 && e.y < to.y + 2.5; Sprites.drawPerson(c, sx, sy, { shirt: e.shirt, skin: e.skin, hair: e.hair, pants: e.pants, kid: e.kid, dress: e.dress, longHair: e.longHair, hat: e.hat, cap: e.cap, dir: e.dir, walking: e.walking, phase: e.phase, sitting: e.sitting, swim: e.swim || inWater, bounce: e.bounce, item: e.item, tool: d.t === 3 ? (e.role === 'schoonmaker' ? 'bezem' : e.role === 'monteur' ? 'kist' : 'vlag') : null, vest: d.t === 3 && e.role === 'monteur' ? '#ff8c00' : null, armsUp: d.t === 3 && e.state === 'work' && (e.task === 'perform' || e.task === 'campfire') }, time); }
+      else if (d.t === 2 || d.t === 3) { const e = d.e; const [sx, sy] = this.tileToWorld(e.x, e.y); const to = World.objAt(Math.floor(e.x), Math.floor(e.y)); const inWater = to && to.type === 'zwembad' && e.x > to.x + 0.5 && e.x < to.x + 2.5 && e.y > to.y + 0.5 && e.y < to.y + 2.5; Sprites.drawPerson(c, sx, sy, { shirt: e.shirt, skin: e.skin, hair: e.hair, pants: e.pants, kid: e.kid, dress: e.dress, longHair: e.longHair, hat: e.hat, cap: e.cap, dir: e.dir, walking: e.walking, phase: e.phase, sitting: e.sitting, swim: e.swim || inWater, bounce: e.bounce, item: e.item, tool: d.t === 3 ? (e.role === 'schoonmaker' ? 'bezem' : e.role === 'monteur' ? 'kist' : e.role === 'tuinman' ? 'hark' : 'vlag') : null, vest: d.t === 3 && e.role === 'monteur' ? '#ff8c00' : null, armsUp: d.t === 3 && e.state === 'work' && (e.task === 'perform' || e.task === 'campfire'), working: d.t === 3 && e.state === 'work' && e.task === 'tend' }, time); }
       else { const a = d.e; const [sx, sy] = this.tileToWorld(a.x, a.y); Sprites.drawAnimal(c, sx, sy, a.kind, a.dir, a.state === 'walk' ? time + a.phase : 0); }
     }
     this.drawStatusIcons(c);
@@ -153,6 +153,7 @@ const Render = {
     let variant = o.variant; const def = DATA.items[o.type];
     if (o.type === 'kampvuurplaats') variant = (evening && o.users.length > 0) || (evening && Game.isEvening()) ? 1 : 0;
     else if ((def.kind === 'pathobj' && o.type !== 'slagboom') || (def.onPath && World.path[World.idx(o.x, o.y)])) variant = World.edgeVariant(o);
+    else if (def.care && (def.kind === 'spot' || def.kind === 'deco')) variant = World.careOf(o) < 40 ? 1 : 0; // verwilderd
     const sp = Sprites.get(o.type, variant, o.mirror);
     const [sx, sy] = this.tileToWorld(o.x, o.y);
     const dim = !World.isOwned(o.x, o.y); if (dim) c.globalAlpha = 0.55;

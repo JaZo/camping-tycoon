@@ -59,7 +59,7 @@ window.runSelfTest = function () {
     const ow0 = World.ownedH(); const landOk = Game.buyLand('n'); log('grond gekocht', landOk, 'hoogte', ow0, '->', World.ownedH(), 'volgende strook', Util.euro(World.landCost('n')), 'west', Util.euro(World.landCost('w')));
     log('padobject-randen', JSON.stringify(World.listByType('prullenbak').map(o => World.edgeVariant(o))), JSON.stringify(World.listByType('lantaarn').map(o => World.edgeVariant(o))));
     for (const k of ['geit', 'schaap', 'kip', 'koe', 'pony', 'konijn']) { const x = ex - 14 + Math.floor(Math.random() * 28), y = Y(31) + Math.floor(Math.random() * 4); if (World.canPlace(DATA.items[k], x, y).ok) Game.build(DATA.items[k], x, y); }
-    Staff.hire('schoonmaker'); Staff.hire('schoonmaker'); Staff.hire('monteur'); Staff.hire('animator');
+    Staff.hire('schoonmaker'); Staff.hire('schoonmaker'); Staff.hire('monteur'); Staff.hire('animator'); if (!params.get('notuinman')) Staff.hire('tuinman');
     [...Staff.list.values()].find(s => s.role === 'schoonmaker').focus = 'sanitair';
     if (params.get('month')) { const m = +params.get('month'); Game.day = ((m - DATA.START_MONTH + 12) % 12) * DATA.DAYS_PER_MONTH; Sprites.season = DATA.seasonOf(Game.month); Sprites.clearSeasonal(); Econ.rollWeather(); }
     Game.money = 60000;
@@ -89,6 +89,7 @@ window.runSelfTest = function () {
     log('onbereikbaar', JSON.stringify(unreach));
     const occ = {}; for (const o of World.objects.values()) { const d = DATA.items[o.type]; if (d.kind === 'spot') { occ[o.type] = occ[o.type] || [0, 0]; occ[o.type][1]++; if (o.occupant) occ[o.type][0]++; } }
     log('bezetting per type', JSON.stringify(occ));
+    { let n = 0, sum = 0, wild = 0; for (const o of World.objects.values()) { if (DATA.items[o.type].care) { n++; sum += World.careOf(o); if (World.careOf(o) < 40) wild++; } } const tm = [...Staff.list.values()].filter(s => s.role === 'tuinman'); log('verzorging gem.', Math.round(sum / Math.max(1, n)), 'verwilderd', wild, 'van', n, 'tuinman taken', JSON.stringify(tm.map(s => s.tasksDone + '/' + s.state + '/' + s.task))); }
     log('sanitair vervuiling', JSON.stringify([...World.objects.values()].filter(o => DATA.items[o.type].dirtRate).map(o => o.type + ':' + Math.round(o.dirt))), 'schoonmakers', JSON.stringify([...Staff.list.values()].filter(s => s.role === 'schoonmaker').map(s => s.focus + '/' + s.task)));
     log('ledger', JSON.stringify(Econ.ledger.cur), JSON.stringify(Econ.ledger.prev));
     log('breakdown', JSON.stringify(Econ.breakdown));

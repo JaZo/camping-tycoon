@@ -39,7 +39,7 @@ const Econ = {
     for (const o of World.objects.values()) {
       const d = DATA.items[o.type];
       if (d.service === 'fun') funSet.add(o.type);
-      if (d.nature) nature += d.nature;
+      if (d.nature) nature += d.nature * World.careFactor(o);
       if (d.kind === 'spot') spots++;
       if (d.dirtRate) { dirtSum += o.dirt; dirtN++; }
       if (o.broken) broken++;
@@ -92,6 +92,8 @@ const Econ = {
       for (const id of p.members) { const g = Guests.guests.get(id); if (!g) continue; if (svc) { g.happy = Math.min(100, g.happy + 2); if (Util.chance(0.3)) Guests.think(g, 'service'); } else { g.happy -= 1.5; Guests.think(g, 'noservice'); } }
     }
     // natuurlijke slijtage en vervuiling
+    // gras groeit, bloemen verwelken: verzorging neemt dagelijks af (de tuinman herstelt het)
+    for (const o of World.objects.values()) { const d = DATA.items[o.type]; if (d.care) o.care = Math.max(0, World.careOf(o) - d.care); }
     const hasMonteur = [...Staff.list.values()].some(s => s.role === 'monteur');
     for (const o of World.objects.values()) {
       const d = DATA.items[o.type]; if (!d.breakable) continue;

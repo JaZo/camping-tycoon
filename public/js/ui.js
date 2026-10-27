@@ -121,7 +121,7 @@ const UI = {
     const c = cv.getContext('2d');
     if (it.kind === 'path' || it.kind === 'terrain') { c.drawImage(Sprites.ground(it.kind === 'path' ? (it.pathType === 2 ? 'tegel' : 'grind') : it.terrain === 2 ? 'water' : it.terrain === 1 ? 'zand' : 'gras', 0), 10, 30, 120, 60); }
     else if (it.kind === 'animal') { c.save(); c.translate(70, 80); c.scale(3, 3); Sprites.drawAnimal(c, 0, 0, it.id, 1, 0); c.restore(); }
-    else if (it.kind === 'staff') { c.save(); c.translate(70, 95); c.scale(3, 3); Sprites.drawPerson(c, 0, 0, { shirt: it.color, skin: C.skins[0], hair: C.hairs[1], pants: '#3b4a6b', dir: 1, tool: it.id === 'schoonmaker' ? 'bezem' : it.id === 'monteur' ? 'kist' : 'vlag', vest: it.id === 'monteur' ? '#ff8c00' : null }, 0); c.restore(); }
+    else if (it.kind === 'staff') { c.save(); c.translate(70, 95); c.scale(3, 3); Sprites.drawPerson(c, 0, 0, { shirt: it.color, skin: C.skins[0], hair: C.hairs[1], pants: '#3b4a6b', dir: 1, tool: it.id === 'schoonmaker' ? 'bezem' : it.id === 'monteur' ? 'kist' : it.id === 'tuinman' ? 'hark' : 'vlag', vest: it.id === 'monteur' ? '#ff8c00' : null }, 0); c.restore(); }
     else if (it.kind === 'demolish') { c.font = '60px sans-serif'; c.textAlign = 'center'; c.fillText('🧨', 70, 80); }
     else if (it.kind === 'land') { c.drawImage(Sprites.ground('gras', 1), 10, 30, 120, 60); c.fillStyle = 'rgba(241,196,15,0.9)'; c.font = 'bold 44px sans-serif'; c.textAlign = 'center'; c.fillText({ n: '↑', w: '←', e: '→' }[it.dir], 70, 76); }
     else { const sp = Sprites.get(it.id, 0); const sc = Math.min(130 / sp.w, 100 / sp.h, 1.2); c.drawImage(sp.cv, 70 - sp.w * sc / 2, 55 - sp.h * sc / 2, sp.w * sc, sp.h * sc); }
@@ -186,9 +186,11 @@ const UI = {
         html += '<div class="row"><span>Prijs per nacht</span><b>' + Util.euro(Game.prices[o.type]) + '</b></div>';
         const amb = World.spotAmbience(o); html += '<div class="row"><span>Sfeer</span><b>' + (amb > 0.35 ? 'Prachtig' : amb > 0.15 ? 'Mooi' : amb > 0 ? 'Gewoon' : 'Rumoerig') + '</b></div>';
         html += '<div class="row"><span>Bereikbaar</span><b>' + (World.isReachable(o) ? 'Ja' : '<span class="bad">Nee, grenst niet aan een verbonden pad</span>') + '</b></div>';
+        if (d.care) html += this.bar('Verzorging', World.careOf(o)) + (World.careOf(o) < 40 ? '<div class="bad">Verwilderd: het gras staat hoog. Een tuinman houdt dit bij.</div>' : '');
         if (o.occupant) { const p = Guests.parties.get(o.occupant); if (p) { const left = p.arrivedDay + p.nights - Game.day; html += '<div class="sub"><b>' + Util.esc(p.name) + '</b> · ' + DATA.partyTypes[p.type].name + ' · ' + p.members.length + ' pers.<br>Nog ' + Math.max(0, left) + ' nacht(en) · ' + (p.leaving ? 'vertrekt' : 'tevredenheid ' + Math.round(Guests.partyHappiness(p)) + '%') + '</div>'; html += '<button class="small" id="info-follow">Toon gasten</button>'; } }
         else html += '<div class="row"><span>Bezetting</span><b>Vrij</b></div>';
       }
+      if (d.kind === 'deco' && d.care) html += this.bar('Verzorging', World.careOf(o)) + (World.careOf(o) < 40 ? '<div class="bad">Verwaarloosd. Een tuinman houdt het groen bij.</div>' : '');
       if (d.kind === 'facility') {
         if (d.capacity) html += '<div class="row"><span>Bezoekers</span><b>' + o.users.length + ' / ' + d.capacity + '</b></div>';
         if (d.feeKey) html += '<div class="row"><span>Prijs</span><b>' + Util.euro(Game.fees[d.feeKey]) + '</b></div>';

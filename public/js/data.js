@@ -56,23 +56,23 @@ addItem({ id: 'tegelpad', cat: 'paden', name: 'Tegelpad', kind: 'path', pathType
   desc: 'Nette betontegels. Iets duurder, maar het staat verzorgd.' });
 
 // ---- STAPLEKKEN ----------------------------------------------------------
-addItem({ seasonal: true, id: 'tentplek', cat: 'staplekken', name: 'Tentplek', kind: 'spot', w: 2, h: 2, cost: 350, upkeep: 1, sh: 40,
+addItem({ seasonal: true, id: 'tentplek', care: 5, cat: 'staplekken', name: 'Tentplek', kind: 'spot', w: 2, h: 2, cost: 350, upkeep: 1, sh: 40,
   accepts: ['tent'], price: 30, comfort: 1, desc: 'Een grasveldje voor een tent. Goedkoop en populair bij jongeren en gezinnen.' });
-addItem({ seasonal: true, id: 'caravanplek', cat: 'staplekken', name: 'Caravanplek', kind: 'spot', w: 2, h: 2, cost: 650, upkeep: 2, sh: 48,
+addItem({ seasonal: true, id: 'caravanplek', care: 5, cat: 'staplekken', name: 'Caravanplek', kind: 'spot', w: 2, h: 2, cost: 650, upkeep: 2, sh: 48,
   accepts: ['caravan', 'camper'], price: 40, comfort: 1.2, desc: 'Plek met stroomaansluiting voor caravans en campers.' });
-addItem({ seasonal: true, id: 'comfortplek', cat: 'staplekken', name: 'Comfortplek', kind: 'spot', w: 3, h: 3, cost: 1400, upkeep: 3, sh: 48,
+addItem({ seasonal: true, id: 'comfortplek', care: 5, cat: 'staplekken', name: 'Comfortplek', kind: 'spot', w: 3, h: 3, cost: 1400, upkeep: 3, sh: 48,
   accepts: ['tent', 'caravan', 'camper'], price: 52, comfort: 1.5, desc: 'Ruime plek met water, stroom en afvoer. Voor iedereen geschikt.' });
 
 // ---- VERHUUR -------------------------------------------------------------
-addItem({ seasonal: true, id: 'trekkershut', cat: 'verhuur', name: 'Trekkershut', kind: 'spot', w: 2, h: 2, cost: 5500, upkeep: 5, sh: 70,
+addItem({ seasonal: true, id: 'trekkershut', care: 3, cat: 'verhuur', name: 'Trekkershut', kind: 'spot', w: 2, h: 2, cost: 5500, upkeep: 5, sh: 70,
   accepts: ['hut'], price: 80, comfort: 1.6, acc: true, desc: 'Knus houten hutje voor 2-4 personen. Ook buiten het seizoen in trek.' });
-addItem({ seasonal: true, id: 'glampingtent', cat: 'verhuur', name: 'Glampingtent', kind: 'spot', w: 2, h: 2, cost: 6500, upkeep: 5, sh: 64,
+addItem({ seasonal: true, id: 'glampingtent', care: 3, cat: 'verhuur', name: 'Glampingtent', kind: 'spot', w: 2, h: 2, cost: 6500, upkeep: 5, sh: 64,
   accepts: ['glamping'], price: 120, comfort: 2, acc: true, desc: 'Luxe safaritent op een houten vlonder. Stellen zijn er dol op.' });
-addItem({ seasonal: true, id: 'stacaravan', cat: 'verhuur', name: 'Stacaravan', kind: 'spot', w: 3, h: 2, cost: 10000, upkeep: 7, sh: 64,
+addItem({ seasonal: true, id: 'stacaravan', care: 3, cat: 'verhuur', name: 'Stacaravan', kind: 'spot', w: 3, h: 2, cost: 10000, upkeep: 7, sh: 64,
   accepts: ['stacaravan'], price: 105, comfort: 1.8, acc: true, desc: 'Vaste caravan met terras. Favoriet bij senioren.' });
-addItem({ seasonal: true, id: 'chalet', cat: 'verhuur', name: 'Chalet', kind: 'spot', w: 3, h: 3, cost: 22000, upkeep: 10, sh: 96,
+addItem({ seasonal: true, id: 'chalet', care: 3, cat: 'verhuur', name: 'Chalet', kind: 'spot', w: 3, h: 3, cost: 22000, upkeep: 10, sh: 96,
   accepts: ['chalet'], price: 200, comfort: 2.5, acc: true, desc: 'Luxe vakantiehuis met veranda. Het hele jaar verhuurbaar.' });
-addItem({ seasonal: true, id: 'pipowagen', cat: 'verhuur', name: 'Pipowagen', kind: 'spot', w: 2, h: 1, cost: 4800, upkeep: 4, sh: 64,
+addItem({ seasonal: true, id: 'pipowagen', care: 3, cat: 'verhuur', name: 'Pipowagen', kind: 'spot', w: 2, h: 1, cost: 4800, upkeep: 4, sh: 64,
   accepts: ['pipowagen'], price: 95, comfort: 1.7, acc: true, desc: 'Vrolijk beschilderde woonwagen. Kinderen vinden hem geweldig.' });
 
 // ---- VOORZIENINGEN -------------------------------------------------------
@@ -207,15 +207,15 @@ addItem({ id: 'bioscoop', cat: 'recreatie', name: 'Bioscoop', kind: 'facility', 
   desc: 'Kleine filmzaal. Vooral \'s avonds en bij regen populair.' });
 
 // ---- NATUUR --------------------------------------------------------------
-addItem({ id: 'eik', cat: 'natuur', name: 'Eik', kind: 'deco', w: 1, h: 1, cost: 90, sh: 72, nature: 1, seasonal: true, desc: 'Grote loofboom. Geeft schaduw en sfeer.' });
-addItem({ id: 'den', cat: 'natuur', name: 'Dennenboom', kind: 'deco', w: 1, h: 1, cost: 80, sh: 72, nature: 1, desc: 'Altijd groen. Ruikt naar vakantie.' });
-addItem({ id: 'berk', cat: 'natuur', name: 'Berk', kind: 'deco', w: 1, h: 1, cost: 85, sh: 66, nature: 1, seasonal: true, desc: 'Slanke boom met witte stam.' });
-addItem({ id: 'wilg', cat: 'natuur', name: 'Treurwilg', kind: 'deco', w: 1, h: 1, cost: 110, sh: 64, nature: 1.2, seasonal: true, desc: 'Staat prachtig aan het water.' });
-addItem({ id: 'fruitboom', cat: 'natuur', name: 'Appelboom', kind: 'deco', w: 1, h: 1, cost: 120, sh: 56, nature: 1.2, seasonal: true, desc: 'Kleine boom vol appels.' });
-addItem({ id: 'struik', cat: 'natuur', name: 'Struik', kind: 'deco', w: 1, h: 1, cost: 40, sh: 30, nature: 0.5, desc: 'Lage struik, handig als afscheiding.' });
-addItem({ id: 'heg', cat: 'natuur', name: 'Heg', kind: 'deco', w: 1, h: 1, cost: 35, sh: 26, nature: 0.4, desc: 'Strak geknipte haag. Geeft privacy tussen plekken.' });
-addItem({ id: 'bloemperk', cat: 'natuur', name: 'Bloemperk', kind: 'deco', w: 1, h: 1, cost: 60, sh: 18, nature: 0.8, desc: 'Kleurrijk perk. Gasten worden er vrolijk van.' });
-addItem({ id: 'bloemen', cat: 'natuur', name: 'Wilde bloemen', kind: 'deco', w: 1, h: 1, cost: 25, sh: 18, nature: 0.5, desc: 'Veldbloemen voor bijen en vlinders.' });
+addItem({ id: 'eik', care: 1.5, cat: 'natuur', name: 'Eik', kind: 'deco', w: 1, h: 1, cost: 90, sh: 72, nature: 1, seasonal: true, desc: 'Grote loofboom. Geeft schaduw en sfeer.' });
+addItem({ id: 'den', care: 1.5, cat: 'natuur', name: 'Dennenboom', kind: 'deco', w: 1, h: 1, cost: 80, sh: 72, nature: 1, desc: 'Altijd groen. Ruikt naar vakantie.' });
+addItem({ id: 'berk', care: 1.5, cat: 'natuur', name: 'Berk', kind: 'deco', w: 1, h: 1, cost: 85, sh: 66, nature: 1, seasonal: true, desc: 'Slanke boom met witte stam.' });
+addItem({ id: 'wilg', care: 1.5, cat: 'natuur', name: 'Treurwilg', kind: 'deco', w: 1, h: 1, cost: 110, sh: 64, nature: 1.2, seasonal: true, desc: 'Staat prachtig aan het water.' });
+addItem({ id: 'fruitboom', care: 2, cat: 'natuur', name: 'Appelboom', kind: 'deco', w: 1, h: 1, cost: 120, sh: 56, nature: 1.2, seasonal: true, desc: 'Kleine boom vol appels.' });
+addItem({ id: 'struik', care: 3, cat: 'natuur', name: 'Struik', kind: 'deco', w: 1, h: 1, cost: 40, sh: 30, nature: 0.5, desc: 'Lage struik, handig als afscheiding.' });
+addItem({ id: 'heg', care: 4, cat: 'natuur', name: 'Heg', kind: 'deco', w: 1, h: 1, cost: 35, sh: 26, nature: 0.4, desc: 'Strak geknipte haag. Geeft privacy tussen plekken.' });
+addItem({ id: 'bloemperk', care: 7, cat: 'natuur', name: 'Bloemperk', kind: 'deco', w: 1, h: 1, cost: 60, sh: 18, nature: 0.8, desc: 'Kleurrijk perk. Gasten worden er vrolijk van.' });
+addItem({ id: 'bloemen', care: 6, cat: 'natuur', name: 'Wilde bloemen', kind: 'deco', w: 1, h: 1, cost: 25, sh: 18, nature: 0.5, desc: 'Veldbloemen voor bijen en vlinders.' });
 addItem({ id: 'rotsblok', cat: 'natuur', name: 'Rotsblok', kind: 'deco', w: 1, h: 1, cost: 70, sh: 30, nature: 0.3, desc: 'Decoratieve zwerfkei.' });
 
 // ---- DIEREN (entiteiten, geen tegelobjecten) --------------------------------
@@ -234,6 +234,7 @@ for (const a of Object.values(DATA.animals)) DATA.items[a.id] = Object.assign({ 
 DATA.staff = {
   schoonmaker: { id: 'schoonmaker', name: 'Schoonmaker', wage: 60, color: '#3f7fd6', desc: 'Raapt zwerfafval op en maakt het sanitair schoon. Je kunt een focus instellen.' },
   monteur: { id: 'monteur', name: 'Onderhoudsmonteur', wage: 80, color: '#f08c1e', desc: 'Repareert kapotte voorzieningen en doet preventief onderhoud.' },
+  tuinman: { id: 'tuinman', name: 'Tuinman', wage: 65, color: '#5aa84a', desc: 'Maait het gras op de staplekken en verzorgt bloemen, heggen en struiken. Zonder tuinman verwildert je camping langzaam.' },
   animator: { id: 'animator', name: 'Animatiemedewerker', wage: 70, color: '#e8d21d', desc: 'Zorgt voor vermaak: spelletjes, dansjes en \'s avonds het kampvuur.' },
 };
 for (const s of Object.values(DATA.staff)) DATA.items[s.id] = Object.assign({ cat: 'personeel', kind: 'staff', cost: 0, w: 1, h: 1 }, s);
@@ -309,13 +310,14 @@ DATA.thoughts = {
   campfire: ['Gezellig bij het vuur.', 'Marshmallows!'],
   wait: ['Wachten, wachten...'],
   bin: ['Afval netjes weggegooid.', 'Even naar de prullenbak.'],
+  overgrown: ['Het gras staat hier wel hoog.', 'Deze plek kan wel wat onderhoud gebruiken.', 'Wat een verwilderde boel.'],
   service: ['Fijn, grijswater geloosd en water getankt.'],
   noservice: ['Waar kan ik mijn grijswater kwijt?', 'Geen servicepunt voor de camper...'],
 };
 
 DATA.complaintNames = { nofood: 'nergens eten te krijgen', nohygiene: 'geen sanitair', nofun: 'niets te doen', full: 'te druk bij voorzieningen',
   broken: 'kapotte voorzieningen', litter: 'zwerfafval', dirtyfac: 'vies sanitair', dark: 'donkere paden', rain: 'regen', pricey: 'te duur',
-  wait: 'lang wachten', hungry: 'honger', dirty: 'wilde douchen', bored: 'verveling', tired: 'vermoeidheid', noservice: 'geen camperservicepunt' };
+  wait: 'lang wachten', hungry: 'honger', dirty: 'wilde douchen', bored: 'verveling', tired: 'vermoeidheid', noservice: 'geen camperservicepunt', overgrown: 'verwilderde staplek' };
 
 // ---- DOELEN --------------------------------------------------------------
 DATA.milestones = [
@@ -352,4 +354,5 @@ DATA.tips = [
   'Te weinig ruimte? Koop in de categorie Terrein een strook grond bij.',
   'Druk op R (of de knop Draaien) om een gebouw te draaien voordat je het plaatst. Via het infopaneel kun je gebouwen ook verplaatsen.',
   'Geef schoonmakers een focus (afval of sanitair) via het infopaneel of het personeelsoverzicht.',
+  'Gras groeit en bloemen verwelken. Een tuinman houdt staplekken en groen verzorgd; verwilderde plekken kosten sfeer en sterren.',
 ];

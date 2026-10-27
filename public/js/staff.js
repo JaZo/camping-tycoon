@@ -9,7 +9,7 @@ const Staff = {
     const def = DATA.staff[role];
     const s = { id: this.nextId++, role, name: Names.adultName() + ' ' + Util.pick(Names.surnames), hired: Game.day,
       x: World.entrance.x + 0.5, y: World.entrance.y + 0.5, ox: Util.rand(-0.2, 0.2), oy: Util.rand(-0.2, 0.2), dir: -1, phase: Math.random() * 6,
-      speed: 2.6, skin: Util.pick(C.skins), hair: Util.pick(C.hairs), shirt: def.color, pants: role === 'schoonmaker' ? '#2a4d8f' : role === 'monteur' ? '#4a4a4a' : '#333',
+      speed: 2.6, skin: Util.pick(C.skins), hair: Util.pick(C.hairs), shirt: def.color, pants: role === 'schoonmaker' ? '#2a4d8f' : role === 'monteur' ? '#4a4a4a' : role === 'tuinman' ? '#5a4a3a' : '#333',
       state: 'idle', task: null, target: 0, route: null, ri: 0, dest: null, timer: Util.rand(0, 1), hidden: false, walking: false, idleTime: 0,
       tasksDone: 0, focus: 'alles' };
     this.list.set(s.id, s);
@@ -66,6 +66,20 @@ const Staff = {
       for (const o of worn) if (this.goToObject(s, o, 'service')) return;
       this.wander(s); return;
     }
+    if (s.role === 'tuinman') {
+      this.releaseClaims(s);
+      let best = null, bs = 0;
+      for (const o of World.objects.values()) {
+        const d = DATA.items[o.type]; if (!d.care) continue;
+        const care = World.careOf(o); if (care > 65) continue;
+        if (o.gardenerId && o.gardenerId !== s.id) { const g = this.list.get(o.gardenerId); if (g && g.task === 'tend' && g.target === o.id) continue; }
+        if (!World.stagingTile(o)) continue;
+        const score = (100 - care) * (d.nature || 1.2) / (1 + (Math.abs(o.x - s.x) + Math.abs(o.y - s.y)) / 8);
+        if (score > bs) { bs = score; best = o; }
+      }
+      if (best) { const st = World.stagingTile(best); if (this.routeTo(s, new Set([World.idx(st[0], st[1])]))) { s.task = 'tend'; s.target = best.id; best.gardenerId = s.id; return; } }
+      this.wander(s); return;
+    }
     if (s.role === 'animator') {
       if (Game.isEvening()) {
         const fires = World.listByType('kampvuurplaats').filter(o => World.isReachable(o));
@@ -93,7 +107,7 @@ const Staff = {
   },
   releaseClaims(s) {
     if (s.claim !== undefined) { if (this.claims.get(s.claim) === s.id) this.claims.delete(s.claim); s.claim = undefined; }
-    if (s.target) { const o = World.objects.get(s.target); if (o && o.cleanerId === s.id) o.cleanerId = 0; }
+    if (s.target) { const o = World.objects.get(s.target); if (o && o.cleanerId === s.id) o.cleanerId = 0; if (o && o.gardenerId === s.id) o.gardenerId = 0; }
   },
   updateOne(s, dt) {
     switch (s.state) {
@@ -101,6 +115,10 @@ const Staff = {
       case 'walk': {
         if (Guests.moveEntity(s, dt)) this.arrive(s);
         else if (s.task === 'litter' && s.ri % 2 === 0) { const i = World.idx(Math.floor(s.x), Math.floor(s.y)); if (World.litter[i] > 0) { s.route = null; this.arrive(s); } }
+        break;
+      }
+      case 'walkfree': { // van het pad het gras op (of terug) om groen te verzorgen
+        if (Guests.moveEntity(s, dt)) { if (s.task === 'tend' && !s.returning) { s.state = 'work'; s.timer = 2.5; } else { s.returning = false; s.state = 'idle'; s.timer = 0.3; } }
         break;
       }
       case 'work': {
@@ -124,6 +142,7 @@ const Staff = {
     if (s.task === 'clean' && o) { s.state = 'work'; s.timer = 4; s.hidden = DATA.items[o.type].indoor; return; }
     if (s.task === 'repair' && o) { if (!o.broken) { s.state = 'idle'; s.timer = 0.2; return; } s.state = 'work'; s.timer = 6; return; }
     if (s.task === 'service' && o) { s.state = 'work'; s.timer = 3; return; }
+    if (s.task === 'tend' && o) { s.stage = [s.x, s.y]; s.dest = [o.x + o.w / 2 + 0.2, o.y + o.h + 0.35]; if (!World.isOwned(Math.floor(s.dest[0]), Math.floor(s.dest[1]))) s.dest = [o.x + o.w / 2, o.y - 0.35]; s.returning = false; s.state = 'walkfree'; return; }
     if (s.task === 'perform') { s.state = 'work'; s.timer = 6; return; }
     if (s.task === 'campfire') { s.state = 'work'; s.timer = 30; return; }
     s.state = 'idle'; s.timer = Util.rand(1, 3);
@@ -136,13 +155,20 @@ const Staff = {
     else if (s.task === 'repair' && o) { o.broken = false; o.cond = 100; s.tasksDone++; UI.notify(DATA.items[o.type].name + ' is gerepareerd door ' + s.name + '.', 'good'); }
     else if (s.task === 'service' && o) { o.cond = Math.min(100, o.cond + 45); s.tasksDone++; }
     else if (s.task === 'perform' || s.task === 'campfire') s.tasksDone++;
+    else if (s.task === 'tend') {
+      // alles in de buurt in één keer verzorgen
+      for (const ob of World.objects.values()) { const d = DATA.items[ob.type]; if (!d.care) continue; if (Math.abs(ob.x + ob.w / 2 - s.x) <= 2.5 && Math.abs(ob.y + ob.h / 2 - s.y) <= 2.5) { if (World.careOf(ob) < 100) s.tasksDone++; ob.care = 100; } }
+      this.releaseClaims(s);
+      s.task = null; s.target = 0; s.returning = true; s.dest = s.stage ? [s.stage[0], s.stage[1]] : null; s.state = s.dest ? 'walkfree' : 'idle'; s.timer = 0.3; return;
+    }
     this.releaseClaims(s);
     s.task = null; s.target = 0; s.state = 'idle'; s.timer = 0.3;
   },
   statusText(s) {
     const o = s.target ? World.objects.get(s.target) : null, n = o ? DATA.items[o.type].name.toLowerCase() : '';
-    if (s.state === 'walk') return { litter: 'Op weg naar zwerfafval', clean: 'Op weg naar ' + n, repair: 'Op weg naar kapotte ' + n, service: 'Op weg voor onderhoud aan ' + n, perform: 'Op zoek naar publiek', campfire: 'Op weg naar het kampvuur', wander: 'Loopt een rondje' }[s.task] || 'Onderweg';
-    if (s.state === 'work') return { litter: 'Raapt afval op', clean: 'Maakt ' + n + ' schoon', repair: 'Repareert ' + n, service: 'Onderhoudt ' + n, perform: 'Voert een act op', campfire: 'Zingt bij het kampvuur' }[s.task] || 'Aan het werk';
+    if (s.state === 'walkfree') return s.returning ? 'Loopt terug naar het pad' : 'Loopt naar het groen';
+    if (s.state === 'walk') return { litter: 'Op weg naar zwerfafval', clean: 'Op weg naar ' + n, repair: 'Op weg naar kapotte ' + n, service: 'Op weg voor onderhoud aan ' + n, tend: 'Op weg naar ' + (n || 'het groen'), perform: 'Op zoek naar publiek', campfire: 'Op weg naar het kampvuur', wander: 'Loopt een rondje' }[s.task] || 'Onderweg';
+    if (s.state === 'work') return { litter: 'Raapt afval op', clean: 'Maakt ' + n + ' schoon', repair: 'Repareert ' + n, service: 'Onderhoudt ' + n, tend: 'Harkt en snoeit', perform: 'Voert een act op', campfire: 'Zingt bij het kampvuur' }[s.task] || 'Aan het werk';
     return 'Kijkt rond';
   },
   serialize() { return { nextId: this.nextId, list: [...this.list.values()] }; },

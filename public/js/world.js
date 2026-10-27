@@ -251,12 +251,14 @@ const World = {
     }
     return n;
   },
+  careOf(o) { return o.care === undefined ? 100 : o.care; },
+  careFactor(o) { return 0.5 + 0.5 * this.careOf(o) / 100; }, // verwaarloosd groen telt half mee
   natureScoreAt(x, y, r) {
     let s = 0;
     for (const o of this.objects.values()) {
       const def = DATA.items[o.type]; if (!def.nature) continue;
       const cx = o.x + o.w / 2, cy = o.y + o.h / 2, d = Math.max(Math.abs(cx - x), Math.abs(cy - y));
-      if (d <= r) s += def.nature * (1 - d / (r + 1));
+      if (d <= r) s += def.nature * this.careFactor(o) * (1 - d / (r + 1));
     }
     let water = 0;
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const tx = Math.round(x + dx), ty = Math.round(y + dy); if (this.inb(tx, ty) && this.terrain[this.idx(tx, ty)] === 2) water++; }
@@ -267,7 +269,7 @@ const World = {
     const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
     const nature = this.natureScoreAt(cx, cy, 3.5);
     const noise = this.countNear(cx, cy, 3, p => p !== o && DATA.items[p.type].kind === 'facility' && (DATA.items[p.type].service === 'fun' || p.type === 'restaurant' || p.type === 'snackbar' || p.type === 'sanitairgebouw'));
-    return Util.clamp(nature * 0.12 - noise * 0.08, -0.3, 0.6);
+    return Util.clamp(nature * 0.12 - noise * 0.08 + (this.careOf(o) - 70) / 100 * 0.2, -0.35, 0.6);
   },
   binNear(x, y) {
     for (const o of this.objects.values()) { const r = DATA.items[o.type].binRadius; if (r && Math.abs(o.x + o.w / 2 - 0.5 - x) <= r && Math.abs(o.y + o.h / 2 - 0.5 - y) <= r) return true; }
@@ -286,6 +288,17 @@ const World = {
   listByType(type) { const r = []; for (const o of this.objects.values()) if (o.type === type) r.push(o); return r; },
   pathTileCount() { let n = 0; for (let i = 0; i < this.path.length; i++) if (this.path[i]) n++; return n; },
   totalLitter() { let n = 0; for (let i = 0; i < this.litter.length; i++) n += this.litter[i]; return n; },
+  // dichtstbijzijnde bereikbare padtegel binnen 4 tegels van een object (werkplek voor de tuinman)
+  stagingTile(o) {
+    this.recomputeReach();
+    if (o._stageV === this.pathVersion) return o._stage;
+    const cx = o.x + o.w / 2, cy = o.y + o.h / 2; let best = null, bd = 99;
+    for (let y = o.y - 4; y < o.y + o.h + 4; y++) for (let x = o.x - 4; x < o.x + o.w + 4; x++) {
+      if (!this.inb(x, y)) continue; const i = this.idx(x, y); if (!this.path[i] || !this.reach[i]) continue;
+      const d = Math.abs(x + 0.5 - cx) + Math.abs(y + 0.5 - cy); if (d < bd) { bd = d; best = [x, y]; }
+    }
+    o._stage = best; o._stageV = this.pathVersion; return best;
+  },
   // willekeurig punt in een zone-lijst (lokale coördinaten) -> wereldcoördinaten
   randomZonePoint(o) {
     const z = ZONES[o.type]; let r;

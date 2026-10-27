@@ -456,6 +456,8 @@ const Guests = {
   // is de gast al bezig deze behoefte te vervullen (onderweg, in de rij of binnen)?
   pursuing(g, need) { return g.need === need && (g.state === 'use' || g.state === 'wait' || (g.state === 'walk' && g.goal === 'facility')); },
   maybeIdleThink(g, p) {
+    const sp = World.objects.get(p.spot);
+    if (sp && World.careOf(sp) < 40) { if (Util.chance(0.35)) { this.think(g, 'overgrown'); g.happy -= 1.5; } return; }
     if (p.ambience > 0.3 && Util.chance(0.2)) this.think(g, 'nature');
   },
   onNewTile(g, p) {
