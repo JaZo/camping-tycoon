@@ -272,9 +272,57 @@ const UI = {
       '<div><h3>Vorige maand' + (L.prevLabel ? ' (' + Util.esc(L.prevLabel) + ')' : '') + '</h3>' + this.table(ledgerRows(prev)) + '</div></div>' +
       '<h3>Overzicht</h3>' + this.table([['Kas', '<b>' + Util.euro(Game.money) + '</b>'], ['Vaste kosten per dag', '<b>' + Util.euro(upkeep + wages + feed) + '</b>'], ['&nbsp;&nbsp;onderhoud gebouwen', Util.euro(upkeep)], ['&nbsp;&nbsp;personeel', Util.euro(wages)], ['&nbsp;&nbsp;dierenvoer', Util.euro(feed)], ['Bezetting', occ + ' van ' + spots + ' plekken'], ['Overnachtingen totaal', Game.stats.nights], ['Gasten ontvangen totaal', Game.stats.totalGuests]]);
   },
+  // Waar lopen gasten tegenaan? Concrete knelpunten met een tip.
+  adviceList() {
+    const adv = [], st = Game.stats, guests = [...Guests.guests.values()], n = guests.length;
+    const winter = DATA.seasonOf(Game.month) === 'winter', rain = Game.weather === 'regen';
+    const objs = [...World.objects.values()];
+    // loopafstanden van staplekken naar voorzieningen
+    const spots = objs.filter(o => DATA.items[o.type].kind === 'spot' && World.isReachable(o));
+    const dists = { food: [], hygiene: [], fun: [] }, caps = { food: 0, hygiene: 0, fun: 0 };
+    for (const o of objs) { const d = DATA.items[o.type]; if (d.service && caps[d.service] !== undefined && !o.broken && o.open && World.isReachable(o) && !((d.noWinter && winter) || (d.outdoor && !d.rainBonus && rain))) caps[d.service] += d.capacity || 0; }
+    for (const sp of spots.slice(0, 60)) {
+      const door = World.doorTiles(sp)[0]; if (!door) continue; const field = World.distField(door[0], door[1]);
+      for (const svc in dists) {
+        let best = 1e9;
+        for (const o of objs) { const d = DATA.items[o.type]; if (d.service !== svc || o.broken || !o.open) continue; if ((d.noWinter && winter) || (d.outdoor && !d.rainBonus && rain)) continue; for (const t of World.doorTiles(o)) { const v = field[World.idx(t[0], t[1])]; if (v >= 0 && v < best) best = v; } }
+        dists[svc].push(best < 1e9 ? best : 99);
+      }
+    }
+    const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+    const names = { food: ['eten', 'een snackbar, bakker of winkel'], hygiene: ['sanitair', 'een sanitairgebouw of toiletunit'], fun: ['vermaak', 'een speeltuin, trampoline of recreatiezaal'] };
+    for (const svc in dists) {
+      const a = avg(dists[svc]), far = dists[svc].filter(x => x >= 99).length;
+      if (!spots.length) break;
+      if (far > 0 && far >= spots.length) adv.push(['bad', 'Er is geen (bereikbare) voorziening voor ' + names[svc][0] + '. Bouw ' + names[svc][1] + ' aan een pad dat met de ingang verbonden is.']);
+      else if (a > (svc === 'hygiene' ? 14 : 18)) adv.push([a > 26 ? 'bad' : 'warn', 'Gasten lopen gemiddeld ' + Math.round(a) + ' tegels van hun plek naar ' + names[svc][0] + '. Onderweg lopen hun behoeften op; bouw ' + names[svc][1] + ' dichter bij de staplekken.']);
+    }
+    // capaciteit
+    for (const svc in caps) { if (n >= 12 && caps[svc] > 0 && n / caps[svc] > (svc === 'hygiene' ? 5 : svc === 'food' ? 4 : 3)) adv.push(['warn', 'Weinig capaciteit voor ' + names[svc][0] + ': ' + n + ' gasten delen ' + caps[svc] + ' plaatsen. Bouw er meer van, verspreid over het terrein.']); }
+    if ((st.queueYesterday || 0) >= 3) adv.push(['warn', 'Gisteren gaven ' + st.queueYesterday + ' gasten het op in een rij. Breid de drukste voorzieningen uit.']);
+    // seizoen en weer
+    const indoorFun = objs.some(o => { const d = DATA.items[o.type]; return d.service === 'fun' && d.indoor && !o.broken; });
+    if (winter && !indoorFun) adv.push(['warn', 'Het is winter: buitenattracties zijn dicht of ongebruikt. Bouw een recreatiezaal, bioscoop, bowlingbaan of binnenspeeltuin.']);
+    else if (rain && !indoorFun) adv.push(['info', 'Bij regen blijven buitenattracties leeg. Een overdekte attractie houdt gasten ook dan vrolijk.']);
+    // onderhoud en netheid
+    const broken = objs.filter(o => o.broken).length; if (broken) adv.push(['bad', broken + ' voorziening(en) kapot.' + ([...Staff.list.values()].some(s => s.role === 'monteur') ? '' : ' Huur een onderhoudsmonteur in.')]);
+    const dirty = objs.filter(o => DATA.items[o.type].dirtRate && o.dirt > 60).length; if (dirty) adv.push(['warn', dirty + ' sanitairgebouw(en) zijn vies. Meer schoonmakers, of geef een schoonmaker de focus "alleen sanitair".']);
+    const litter = World.totalLitter(); if (litter > 12) adv.push(['warn', 'Er ligt veel zwerfafval (' + litter + ' stuks). Plaats prullenbakken of een afvalstation en huur schoonmakers in.']);
+    const wild = spots.filter(o => World.careOf(o) < 40).length; if (wild) adv.push(['warn', wild + ' staplekken zijn verwilderd (hoog gras).' + ([...Staff.list.values()].some(s => s.role === 'tuinman') ? ' Je tuinman kan het niet bijhouden; huur er een bij.' : ' Huur een tuinman in.')]);
+    const unreach = objs.filter(o => { const d = DATA.items[o.type]; return (d.kind === 'spot' || (d.kind === 'facility' && d.service)) && !World.isReachable(o); }).length; if (unreach) adv.push(['bad', unreach + ' plek(ken) of voorziening(en) zijn onbereikbaar: ze grenzen niet aan een pad dat met de ingang verbonden is.']);
+    if ([...Guests.parties.values()].some(p => p.vehicle === 'caravan' || p.vehicle === 'camper') && !objs.some(o => o.type === 'camperservice' && World.isReachable(o))) adv.push(['info', 'Caravan- en campergasten missen een camperservicepunt.']);
+    // verlichting
+    { let lit = 0, tot = 0; const lamps = objs.filter(o => o.type === 'lantaarn'); for (let i = 0; i < World.path.length; i++) { if (!World.path[i] || !World.reach[i]) continue; tot++; const x = i % World.W, y = (i / World.W) | 0; if (lamps.some(l => Math.abs(l.x - x) <= 3 && Math.abs(l.y - y) <= 3)) lit++; } if (tot > 20 && lit / tot < 0.5) adv.push(['info', 'Veel paden zijn \'s nachts donker (' + Math.round(100 - lit / tot * 100) + '%). Plaats lantaarnpalen langs de paden.']); }
+    return adv;
+  },
   guestsPanel(b) {
     const st = Game.stats, bd = Econ.breakdown;
-    let html = '<div class="cols"><div><h3>Beoordeling: ' + Econ.stars() + ' sterren (' + Math.round(Econ.rating) + '/100)</h3>' +
+    const adv = this.adviceList();
+    const cmp = {}; for (const g of Guests.guests.values()) for (const k in (g.complaints || {})) cmp[k] = (cmp[k] || 0) + g.complaints[k] * (COMPLAINT_WEIGHT[k] || 1);
+    const topCmp = Object.entries(cmp).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    let html = '<h3>Advies: waar lopen gasten tegenaan?</h3>' + (adv.length ? '<ul class="advice">' + adv.map(a => '<li class="' + a[0] + '">' + Util.esc(a[1]) + '</li>').join('') + '</ul>' : '<p class="good">Geen duidelijke knelpunten gevonden.</p>') +
+      (topCmp.length ? '<p class="muted">Meest gehoorde klachten van de gasten die er nu zijn: ' + topCmp.map(e => Util.esc(DATA.complaintNames[e[0]] || e[0])).join(', ') + '.</p>' : '');
+    html += '<div class="cols"><div><h3>Beoordeling: ' + Econ.stars() + ' sterren (' + Math.round(Econ.rating) + '/100)</h3>' +
       this.table([['Tevredenheid gasten', Math.round(bd.happy || 0) + ' / 50'], ['Netheid', Math.round(bd.clean || 0) + ' / 15'], ['Voorzieningen', Math.round(bd.variety || 0) + ' / 20'], ['Natuur & dieren', Math.round(bd.nature || 0) + ' / 15'], ['Strafpunten (vies, kapot, onbereikbaar)', '-' + Math.round(bd.penalty || 0)]]) +
       '</div><div><h3>Gemiste gasten</h3>' + this.table([['Alles bezet', st.turnedAwayFull], ['Te duur', st.turnedAwayPrice], ['Geen receptie', st.noReception], ['Opgegeven in de rij', st.queueGiveUps]].concat(Object.entries(st.missedType).map(([k, v]) => ['Zochten een ' + DATA.wantNames[k] + ' (niet aanwezig)', v]))) + '</div></div>';
     html += '<h3>Gezelschappen nu op de camping (' + Guests.parties.size + ', ' + Guests.guests.size + ' personen)</h3>';

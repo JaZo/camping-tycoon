@@ -30,7 +30,7 @@ Het spel wordt elke minuut automatisch in de browser opgeslagen (localStorage). 
 - Iedere gast heeft behoeften (honger, hygiëne, vermaak, vermoeidheid), een tevredenheid en gedachten die je kunt bekijken door op de gast te klikken.
 - Seizoenen en weer: hoogseizoen in de zomer, regen, sneeuw in de winter, dag en nacht met lantaarnlicht.
 - Voorzieningen slijten, gaan af en toe kapot en worden vies. Een onderhoudsmonteur repareert ze; zonder monteur komt na drie dagen een dure externe reparateur. Gasten laten afval slingeren.
-- Vertrekkende gezelschappen laten weten waarover ze ontevreden waren (in de melding en in het Gasten-paneel onder *Laatste vertrekken*).
+- Vertrekkende gezelschappen laten weten waarover ze ontevreden waren (in de melding en in het Gasten-paneel onder *Laatste vertrekken*). Het Gasten-paneel opent met een **advieslijst** die knelpunten benoemt: te lange loopafstanden, te weinig capaciteit, verwilderde plekken, kapotte of vieze voorzieningen, winter zonder overdekte attracties, donkere paden.
 - Een beoordeling van 0 tot 5 sterren, opgebouwd uit tevredenheid, netheid, voorzieningen en natuur, bepaalt hoeveel gasten er komen en wat ze willen betalen.
 - Prijzen per nacht en tarieven van voorzieningen zijn instelbaar. Maandelijkse financiën, doelen en een noodlening als het misgaat.
 

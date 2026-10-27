@@ -56,11 +56,11 @@ addItem({ id: 'tegelpad', cat: 'paden', name: 'Tegelpad', kind: 'path', pathType
   desc: 'Nette betontegels. Iets duurder, maar het staat verzorgd.' });
 
 // ---- STAPLEKKEN ----------------------------------------------------------
-addItem({ seasonal: true, id: 'tentplek', care: 5, cat: 'staplekken', name: 'Tentplek', kind: 'spot', w: 2, h: 2, cost: 350, upkeep: 1, sh: 40,
+addItem({ seasonal: true, id: 'tentplek', care: 3, cat: 'staplekken', name: 'Tentplek', kind: 'spot', w: 2, h: 2, cost: 350, upkeep: 1, sh: 40,
   accepts: ['tent'], price: 30, comfort: 1, desc: 'Een grasveldje voor een tent. Goedkoop en populair bij jongeren en gezinnen.' });
-addItem({ seasonal: true, id: 'caravanplek', care: 5, cat: 'staplekken', name: 'Caravanplek', kind: 'spot', w: 2, h: 2, cost: 650, upkeep: 2, sh: 48,
+addItem({ seasonal: true, id: 'caravanplek', care: 3, cat: 'staplekken', name: 'Caravanplek', kind: 'spot', w: 2, h: 2, cost: 650, upkeep: 2, sh: 48,
   accepts: ['caravan', 'camper'], price: 40, comfort: 1.2, desc: 'Plek met stroomaansluiting voor caravans en campers.' });
-addItem({ seasonal: true, id: 'comfortplek', care: 5, cat: 'staplekken', name: 'Comfortplek', kind: 'spot', w: 3, h: 3, cost: 1400, upkeep: 3, sh: 48,
+addItem({ seasonal: true, id: 'comfortplek', care: 3, cat: 'staplekken', name: 'Comfortplek', kind: 'spot', w: 3, h: 3, cost: 1400, upkeep: 3, sh: 48,
   accepts: ['tent', 'caravan', 'camper'], price: 52, comfort: 1.5, desc: 'Ruime plek met water, stroom en afvoer. Voor iedereen geschikt.' });
 
 // ---- VERHUUR -------------------------------------------------------------

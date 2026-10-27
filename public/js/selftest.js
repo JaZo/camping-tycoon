@@ -90,6 +90,7 @@ window.runSelfTest = function () {
     const occ = {}; for (const o of World.objects.values()) { const d = DATA.items[o.type]; if (d.kind === 'spot') { occ[o.type] = occ[o.type] || [0, 0]; occ[o.type][1]++; if (o.occupant) occ[o.type][0]++; } }
     log('bezetting per type', JSON.stringify(occ));
     { let n = 0, sum = 0, wild = 0; for (const o of World.objects.values()) { if (DATA.items[o.type].care) { n++; sum += World.careOf(o); if (World.careOf(o) < 40) wild++; } } const tm = [...Staff.list.values()].filter(s => s.role === 'tuinman'); log('verzorging gem.', Math.round(sum / Math.max(1, n)), 'verwilderd', wild, 'van', n, 'tuinman taken', JSON.stringify(tm.map(s => s.tasksDone + '/' + s.state + '/' + s.task))); }
+    log('advies', JSON.stringify(UI.adviceList()));
     log('sanitair vervuiling', JSON.stringify([...World.objects.values()].filter(o => DATA.items[o.type].dirtRate).map(o => o.type + ':' + Math.round(o.dirt))), 'schoonmakers', JSON.stringify([...Staff.list.values()].filter(s => s.role === 'schoonmaker').map(s => s.focus + '/' + s.task)));
     log('ledger', JSON.stringify(Econ.ledger.cur), JSON.stringify(Econ.ledger.prev));
     log('breakdown', JSON.stringify(Econ.breakdown));

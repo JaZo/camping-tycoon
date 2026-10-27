@@ -110,6 +110,9 @@ button.small.danger:hover, button.danger:hover { background: #c0392b; }
 .menu button { background: #3b6e3f; color: #fff; border: 0; border-radius: 8px; padding: 10px; font-weight: 600; text-align: left; }
 .menu button:hover { background: #4caf50; }
 ul.tips { padding-left: 18px; line-height: 1.5; font-size: 13px; }
+ul.advice { list-style: none; padding: 0; margin: 0 0 8px; }
+ul.advice li { padding: 6px 10px; margin: 4px 0; border-radius: 6px; background: rgba(255,255,255,0.06); border-left: 4px solid #3498db; font-size: 13px; line-height: 1.4; }
+ul.advice li.warn { border-color: #f1c40f; } ul.advice li.bad { border-color: #e74c3c; } ul.advice li.info { border-color: #3498db; }
 
 /* ---- bevestiging ---- */
 #confirm { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; }

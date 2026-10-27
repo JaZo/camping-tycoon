@@ -2,13 +2,13 @@
 // ---------------------------------------------------------------------------
 // Gasten en gezelschappen
 // ---------------------------------------------------------------------------
-const NEED_RATE = { hunger: 90, hygiene: 70, fun: 95, energy: 80 }; // per dag
+const NEED_RATE = { hunger: 75, hygiene: 60, fun: 80, energy: 80 }; // per dag
 const COMPLAINT_WEIGHT = { nofood: 3, nohygiene: 3, nofun: 3, broken: 3, full: 2, dirtyfac: 3, litter: 2, pricey: 2, wait: 1, hungry: 1, dirty: 1, bored: 1, tired: 0.5, dark: 1, rain: 0.5 };
 const NEED_PENALTY = { hunger: 0.4, hygiene: 0.4, fun: 0.2, energy: 0.1 }; // tevredenheidsverlies per seconde bij behoefte 100
 const THRESH = { hunger: 55, hygiene: 60, fun: 50, energy: 75 };
 const SERVICE = { hunger: 'food', hygiene: 'hygiene', fun: 'fun' };
 const NEED_NAME = { hunger: 'Honger', hygiene: 'Hygiëne', fun: 'Vermaak', energy: 'Vermoeidheid' };
-const WALK_SPEED = 2.4;
+const WALK_SPEED = 2.6;
 
 const Guests = {
   parties: new Map(), guests: new Map(), nextId: 1,
@@ -392,7 +392,7 @@ const Guests = {
         if (g.needs[k] > 80 && !p.leaving) g.happy -= (g.needs[k] - 80) / 20 * NEED_PENALTY[k] * dt;
       }
       if (g.needs.hunger > 92 && !this.pursuing(g, 'hunger')) this.think(g, 'hungry'); if (g.needs.hygiene > 92 && !this.pursuing(g, 'hygiene')) this.think(g, 'dirty'); if (g.needs.fun > 92 && !this.pursuing(g, 'fun')) this.think(g, 'bored'); if (g.needs.energy > 90) this.think(g, 'tired');
-      if (Game.weather === 'regen' && !g.hidden) { g.happy -= 0.12 * dt; if (Util.chance(dt * 0.02)) this.think(g, 'rain'); }
+      if (Game.weather === 'regen' && !g.hidden) { g.happy -= 0.06 * dt; if (Util.chance(dt * 0.02)) this.think(g, 'rain'); }
       if (Game.weather === 'zon' && !g.hidden && Util.chance(dt * 0.004)) { this.think(g, 'sun'); g.happy += 0.5; }
       if (g.state === 'home') g.happy += (0.25 + p.ambience * 1.5) * dt * (g.happy < 85 ? 1 : 0);
     }
@@ -457,7 +457,7 @@ const Guests = {
   pursuing(g, need) { return g.need === need && (g.state === 'use' || g.state === 'wait' || (g.state === 'walk' && g.goal === 'facility')); },
   maybeIdleThink(g, p) {
     const sp = World.objects.get(p.spot);
-    if (sp && World.careOf(sp) < 40) { if (Util.chance(0.35)) { this.think(g, 'overgrown'); g.happy -= 1.5; } return; }
+    if (sp && World.careOf(sp) < 40) { if (Util.chance(0.35)) { this.think(g, 'overgrown'); g.happy -= 0.5; } return; }
     if (p.ambience > 0.3 && Util.chance(0.2)) this.think(g, 'nature');
   },
   onNewTile(g, p) {

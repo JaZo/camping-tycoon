@@ -104,6 +104,7 @@ const Econ = {
         if (o.brokenDays >= 3) { const bill = 400 + Math.round((d.cost || 0) * 0.03); this.expense('onderhoud', bill); o.broken = false; o.cond = 100; o.brokenDays = 0; UI.notify('Geen monteur in dienst: een externe reparateur heeft ' + d.name.toLowerCase() + ' gerepareerd voor ' + Util.euro(bill) + '.', 'warn'); }
       }
     }
+    Game.stats.queueYesterday = Game.stats.queueGiveUps - (Game.stats.queueAtDayStart || 0); Game.stats.queueAtDayStart = Game.stats.queueGiveUps;
     this.rollWeather();
     if (Game.day % DATA.DAYS_PER_MONTH === 0) this.monthRollover();
     if (Game.money < 0 && Game.money > -25000) UI.notify('Let op: je staat rood! Verlaag kosten of verhoog je inkomsten.', 'warn');
