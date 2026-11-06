@@ -193,6 +193,7 @@ const UI = {
       if (d.kind === 'deco' && d.care) html += this.bar('Verzorging', World.careOf(o)) + (World.careOf(o) < 40 ? '<div class="bad">Verwaarloosd. Een tuinman houdt het groen bij.</div>' : '');
       if (d.kind === 'facility') {
         if (d.capacity) html += '<div class="row"><span>Bezoekers</span><b>' + o.users.length + ' / ' + d.capacity + '</b></div>';
+        if (d.service && d.service !== 'checkin') html += '<div class="row"><span>Gisteren</span><b>' + (o.usesYesterday || 0) + ' bezoeken, ' + (o.fullYesterday || 0) + ' keer vol</b></div>';
         if (d.feeKey) html += '<div class="row"><span>Prijs</span><b>' + Util.euro(Game.fees[d.feeKey]) + '</b></div>';
         if (d.breakable) html += this.bar('Staat', o.cond) + (o.broken ? '<div class="bad"><b>KAPOT</b> – wacht op een onderhoudsmonteur</div>' : '');
         if (d.dirtRate) html += this.bar('Vervuiling', o.dirt, null, true);
@@ -279,8 +280,7 @@ const UI = {
     const objs = [...World.objects.values()];
     // loopafstanden van staplekken naar voorzieningen
     const spots = objs.filter(o => DATA.items[o.type].kind === 'spot' && World.isReachable(o));
-    const dists = { food: [], hygiene: [], fun: [] }, caps = { food: 0, hygiene: 0, fun: 0 };
-    for (const o of objs) { const d = DATA.items[o.type]; if (d.service && caps[d.service] !== undefined && !o.broken && o.open && World.isReachable(o) && !((d.noWinter && winter) || (d.outdoor && !d.rainBonus && rain))) caps[d.service] += d.capacity || 0; }
+    const dists = { food: [], hygiene: [], fun: [] };
     for (const sp of spots.slice(0, 60)) {
       const door = World.doorTiles(sp)[0]; if (!door) continue; const field = World.distField(door[0], door[1]);
       for (const svc in dists) {
@@ -297,8 +297,11 @@ const UI = {
       if (far > 0 && far >= spots.length) adv.push(['bad', 'Er is geen (bereikbare) voorziening voor ' + names[svc][0] + '. Bouw ' + names[svc][1] + ' aan een pad dat met de ingang verbonden is.']);
       else if (a > (svc === 'hygiene' ? 14 : 18)) adv.push([a > 26 ? 'bad' : 'warn', 'Gasten lopen gemiddeld ' + Math.round(a) + ' tegels van hun plek naar ' + names[svc][0] + '. Onderweg lopen hun behoeften op; bouw ' + names[svc][1] + ' dichter bij de staplekken.']);
     }
-    // capaciteit
-    for (const svc in caps) { if (n >= 12 && caps[svc] > 0 && n / caps[svc] > (svc === 'hygiene' ? 5 : svc === 'food' ? 4 : 3)) adv.push(['warn', 'Weinig capaciteit voor ' + names[svc][0] + ': ' + n + ' gasten delen ' + caps[svc] + ' plaatsen. Bouw er meer van, verspreid over het terrein.']); }
+    // drukte: gemeten, niet geschat (gasten douchen nooit allemaal tegelijk)
+    const busy = { food: [0, 0], hygiene: [0, 0], fun: [0, 0] }; let busiest = null;
+    for (const o of objs) { const d = DATA.items[o.type]; if (!d.service || !busy[d.service]) continue; busy[d.service][0] += o.fullYesterday || 0; busy[d.service][1] += o.usesYesterday || 0; if ((o.fullYesterday || 0) >= 8 && (!busiest || o.fullYesterday > busiest.fullYesterday)) busiest = o; }
+    for (const svc in busy) { const [full, uses] = busy[svc]; if (uses >= 20 && full / (uses + full) > 0.15) adv.push(['warn', 'Bij ' + names[svc][0] + ' troffen gasten gisteren ' + full + ' keer een volle voorziening aan (op ' + uses + ' bezoeken). Bouw er meer van, verspreid over het terrein.']); }
+    if (busiest) adv.push(['info', DATA.items[busiest.type].name + ' zat gisteren ' + busiest.fullYesterday + ' keer vol, waarschijnlijk omdat het de dichtstbijzijnde is voor veel plekken. Een tweede exemplaar elders ontlast hem.']);
     if ((st.queueYesterday || 0) >= 3) adv.push(['warn', 'Gisteren gaven ' + st.queueYesterday + ' gasten het op in een rij. Breid de drukste voorzieningen uit.']);
     // seizoen en weer
     const indoorFun = objs.some(o => { const d = DATA.items[o.type]; return d.service === 'fun' && d.indoor && !o.broken; });

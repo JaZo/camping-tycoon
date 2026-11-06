@@ -198,7 +198,7 @@ const Guests = {
       const o = World.objects.get(g.goalObj);
       if (!o || o.broken || !o.open) { if (o && o.broken) { this.think(g, 'broken', DATA.items[o.type].name); g.happy -= 3; } this.decide(g); return; }
       const def = DATA.items[o.type];
-      if (o.users.length >= def.capacity) { g.state = 'wait'; g.timer = 10; g.walking = false; this.think(g, 'wait'); return; }
+      if (o.users.length >= def.capacity) { o.fullHits = (o.fullHits || 0) + 1; g.state = 'wait'; g.timer = 10; g.walking = false; this.think(g, 'wait'); return; }
       this.enter(g, o, g.need);
       return;
     }
@@ -209,7 +209,7 @@ const Guests = {
 
   enter(g, o, need) {
     const def = DATA.items[o.type];
-    o.users.push(g.id); o.uses = (o.uses || 0) + 1; Game.stats.uses = Game.stats.uses || {}; Game.stats.uses[o.type] = (Game.stats.uses[o.type] || 0) + 1;
+    o.users.push(g.id); o.uses = (o.uses || 0) + 1; o.usesToday = (o.usesToday || 0) + 1; Game.stats.uses = Game.stats.uses || {}; Game.stats.uses[o.type] = (Game.stats.uses[o.type] || 0) + 1;
     g.useObj = o.id; g.insideObj = o.id; g.need = need; g.state = 'use'; g.timer = (def.duration || 3) * Util.rand(0.8, 1.2); g.route = null;
     if (def.indoor) { g.hidden = true; g.dest = null; }
     else if (def.style === 'inside' || def.style === 'swim' || def.style === 'bounce') { g.dest = World.randomZonePoint(o); g.swim = def.style === 'swim'; g.bounce = def.style === 'bounce'; }

@@ -105,6 +105,7 @@ const Econ = {
       }
     }
     Game.stats.queueYesterday = Game.stats.queueGiveUps - (Game.stats.queueAtDayStart || 0); Game.stats.queueAtDayStart = Game.stats.queueGiveUps;
+    for (const o of World.objects.values()) { if (o.usesToday || o.fullHits || o.usesYesterday) { o.usesYesterday = o.usesToday || 0; o.fullYesterday = o.fullHits || 0; o.usesToday = 0; o.fullHits = 0; } }
     this.rollWeather();
     if (Game.day % DATA.DAYS_PER_MONTH === 0) this.monthRollover();
     if (Game.money < 0 && Game.money > -25000) UI.notify('Let op: je staat rood! Verlaag kosten of verhoog je inkomsten.', 'warn');
